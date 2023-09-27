@@ -9,8 +9,9 @@ def agent_portrayal(agent):
     portrayal = {"Shape": "circle", "Filled": "true"}
     portrayal["Color"] = "green"
     portrayal["Layer"] = 0
+    
+    portrayal["r"] = max(0.01, min(1, (agent.money / 1000)) )
 
-    portrayal["r"] = max(0.1, min(1, (agent.money / 5000.0)) )
 
     if agent.trading:
         portrayal["Color"] = "red"
