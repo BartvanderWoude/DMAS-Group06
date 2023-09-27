@@ -26,12 +26,7 @@ class AgentModel(Model):
             y = self.random.randrange(self.grid.height)
             self.grid.place_agent(a, (x,y))
 
-    def pickPartner():
-        return
-    
-    # Iteration
-    def step(self):
-        
+    def assignTradePartners(self):
         np.random.shuffle(self.agent_list)  #shuffle the agents
         half = int(self.num_agents/2)
         for pair_idx in range(half):
@@ -40,6 +35,13 @@ class AgentModel(Model):
 
             a1.setTradePartner(a2)
             a2.setTradePartner(None)
+        return
+    
+    
+    # Iteration
+    def step(self):
+        
+        self.assignTradePartners() # Set up duo's
         
         self.schedule.step()    #perform agent actions
 

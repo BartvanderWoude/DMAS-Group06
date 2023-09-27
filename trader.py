@@ -14,10 +14,12 @@ def calculateTrust(agent, partner, witness):
 
     if agent.trust_tactic == 'standard':
         trust = trust_in_partner + witness_trust_in_partner  #standaard
-    if agent.trust_tactic == 'trust_witness':
+    elif agent.trust_tactic == 'trust_witness':
         trust = ((trust_in_witness + witness_trust_in_partner) / 2) + trust_in_partner
-    if agent.trust_tactic == '-':
+    elif agent.trust_tactic == '-':
         pass
+    else:
+        raise NotImplementedError
     return trust / 2
 
 def calculateWitness(all_agents, agent_a, agent_b, used_witness = None):
@@ -28,6 +30,7 @@ def calculateWitness(all_agents, agent_a, agent_b, used_witness = None):
         agent = random.choice([agent for agent in all_agents if (agent != agent_a and agent != agent_b and agent != used_witness)])
     return agent
 
+# Alternative way to find witnesses
 def findWitness(agent, agent_list):
     if agent.witness_tactic == "standard":
         witness = random.choice(agent_list)
@@ -41,7 +44,18 @@ def calculateOffer(agent, trust_target_agent):
 
 def calculateNewTrustValues(target_agent, outcome_offer, witness):
     raise NotImplementedError
-    
+
+# Ways to update trust:
+#   standard: only update your trust in the trading partner
+#   include_witness: include the witness to some extent (same as partner or less? more?)
+def updateTrustValues(agent, gain_or_loss, partner, witness):
+    if agent.trust_update_tactic == "standard":
+        trust_update_value = gain_or_loss/5
+        current_trust = agent.trust_per_trader[partner.unique_id]
+    else:
+        raise NotImplementedError
+    agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust+ trust_update_value))
+    return
 
 class TraderAgent(mesa.Agent):
     def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions):
@@ -59,7 +73,6 @@ class TraderAgent(mesa.Agent):
         self.trust_tactic = "standard"
         self.witness_tactic = "standard"
             
-    
     def setTradePartner(self, partnerObj):
         self.trade_partner = partnerObj
         return
@@ -85,9 +98,8 @@ class TraderAgent(mesa.Agent):
         trust_in_agent_a = calculateTrust(self.trade_partner, self, witness_agent_b)
 
         # Calculate trade offers
-        trade_offer_agent_a = trust_in_agent_b * self.honesty * self.money
-        trade_offer_agent_b = trust_in_agent_a * self.trade_partner.honesty * self.trade_partner.money
-
+        trade_offer_agent_a = trust_in_agent_b * self.honesty * 100
+        trade_offer_agent_b = trust_in_agent_a * self.trade_partner.honesty * 100
         # print("Trade offer agent ", int(self.unique_id), ":\t", trade_offer_agent_a)
         # print("Trade offer agent ", int(agent_b.unique_id), ":\t", trade_offer_agent_b, "\n")
         
@@ -100,6 +112,13 @@ class TraderAgent(mesa.Agent):
         # print("Money of agent ", int(self.unique_id), ":\t", self.money)
         # print("Money of agent ", int(agent_b.unique_id), "", agent_b.money, "\n")
 
+        # Function that sets trust to new value, allows different tactics
+        # This sets the new trust for Agent A
+        # Alternative function by Thijs
+        updateTrustValues(self, my_money_change, self.trade_partner, witness_agent_a)
+        # This updates for agent B
+        updateTrustValues(self.trade_partner, partner_money_change, self, witness_agent_b)
+
         # Calculate the new trusts
         self.trust_per_trader[self.trade_partner.unique_id] = np.clip(self.trust_per_trader[self.trade_partner.unique_id] * (self.interactions[self.trade_partner.unique_id] / (self.interactions[self.trade_partner.unique_id] + 1)) 
                                                         + (trade_offer_agent_b * 1.10) * (1 / (self.interactions[self.trade_partner.unique_id] + 1)), 0, 100) / 100.0
@@ -109,4 +128,3 @@ class TraderAgent(mesa.Agent):
 
         # print("New trust of agent ", int(self.unique_id), " in agent ", int(agent_b.unique_id), ":\t", self.trust_per_trader[agent_b.unique_id])
         # print("New trust of agent ", int(agent_b.unique_id), " in agent ", int(self.unique_id), ":\t", agent_b.trust_per_trader[self.unique_id], "\n")
-
