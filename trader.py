@@ -3,7 +3,6 @@ import mesa
 import seaborn as sns
 import numpy as np
 import pandas as pd
-from strategies import Strategy
 from copy import deepcopy
 
 def calculateTrust(agent, partner, witness):
@@ -12,12 +11,14 @@ def calculateTrust(agent, partner, witness):
     trust_in_witness = agent.trust_per_trader[witness.unique_id]
     witness_trust_in_partner = witness.trust_per_trader[partner.unique_id]
 
-    if agent.trust_tactic == 'standard':
+    tactic = agent.strategies.trust_tactic
+
+    if  tactic == 'standard':
         trust = trust_in_partner + witness_trust_in_partner  #standaard
-    elif agent.trust_tactic == 'trust_witness':
+    elif tactic == 'not_trust_witness':
+        trust = trust_in_partner
+    elif tactic == 'partially_trust_witness':
         trust = ((trust_in_witness + witness_trust_in_partner) / 2) + trust_in_partner
-    elif agent.trust_tactic == '-':
-        pass
     else:
         raise NotImplementedError
     return trust / 2
@@ -39,11 +40,11 @@ def findWitness(agent, agent_list):
     agent_list.remove(witness)
     return witness
 
-def calculateOffer(agent, trust_target_agent):
-    raise NotImplementedError
-
-def calculateNewTrustValues(target_agent, outcome_offer, witness):
-    raise NotImplementedError
+def calculateOffer(agent, trust_in_target_agent):
+    if agent.offer_tactic == "standard":
+        return np.clip(trust_in_target_agent * agent.honesty * 100, 0, 100)
+    else:
+        raise NotImplementedError
 
 # Ways to update trust:
 #   standard: only update your trust in the trading partner
@@ -57,21 +58,28 @@ def updateTrustValues(agent, gain_or_loss, partner, witness):
     agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust+ trust_update_value))
     return
 
+
 class TraderAgent(mesa.Agent):
-    def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions):
+    def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions, strategies=None):
         # Pass the parameters to the parent class.
         super().__init__(unique_id, model)
         self.id = id
         self.model = model
-        self.money = money # int
-        self.honesty = honesty # int
-        self.trust_per_trader = trust_per_trader # array (or list?) 
-        self.interactions = interactions 
+        self.money = money # int start 100
+        self.honesty = honesty # float 0 - 1
+        self.trust_per_trader = trust_per_trader # array (or list?) float for each trader start 0.5
+        self.interactions = interactions
         self.trading = False
         self.witnessing = False
         self.trade_partner = None
-        self.trust_tactic = "standard"
+
+        """tactics, should be changed later maybe"""
+        self.strategies = strategies    #combined strategies
+        self.strat_color = strategies.strat_color   #for visuals
+
         self.witness_tactic = "standard"
+        self.trust_update_tactic = "standard"
+        self.offer_tactic = "standard"
             
     def setTradePartner(self, partnerObj):
         self.trade_partner = partnerObj
@@ -79,7 +87,6 @@ class TraderAgent(mesa.Agent):
 
     def step(self):
         if self.trade_partner is None:
-            # pass
             return
         
         available_agents = self.model.schedule.agents.copy()            #check dit als iets heel raar is
@@ -98,33 +105,27 @@ class TraderAgent(mesa.Agent):
         trust_in_agent_a = calculateTrust(self.trade_partner, self, witness_agent_b)
 
         # Calculate trade offers
-        trade_offer_agent_a = trust_in_agent_b * self.honesty * 100
-        trade_offer_agent_b = trust_in_agent_a * self.trade_partner.honesty * 100
-        # print("Trade offer agent ", int(self.unique_id), ":\t", trade_offer_agent_a)
-        # print("Trade offer agent ", int(agent_b.unique_id), ":\t", trade_offer_agent_b, "\n")
-        
+        trade_offer_agent_a = calculateOffer(self, trust_in_agent_b)
+        trade_offer_agent_b = calculateOffer(self.trade_partner, trust_in_agent_a)
+
         # Calculate new funds
-        my_money_change =  (trade_offer_agent_b * 1.10) - trade_offer_agent_a
+        my_money_change = (trade_offer_agent_b * 1.10) - trade_offer_agent_a
         self.money = self.money + my_money_change
         partner_money_change = (trade_offer_agent_a * 1.10) - trade_offer_agent_b
         self.trade_partner.money = self.trade_partner.money + partner_money_change
 
-        # print("Money of agent ", int(self.unique_id), ":\t", self.money)
-        # print("Money of agent ", int(agent_b.unique_id), "", agent_b.money, "\n")
-
         # Function that sets trust to new value, allows different tactics
         # This sets the new trust for Agent A
         # Alternative function by Thijs
-        updateTrustValues(self, my_money_change, self.trade_partner, witness_agent_a)
-        # This updates for agent B
-        updateTrustValues(self.trade_partner, partner_money_change, self, witness_agent_b)
+        updateTrustValues(self, my_money_change, self.trade_partner, witness_agent_a)       #update agent A
+        updateTrustValues(self.trade_partner, partner_money_change, self, witness_agent_b)  #update agent B
 
-        # Calculate the new trusts
-        self.trust_per_trader[self.trade_partner.unique_id] = np.clip(self.trust_per_trader[self.trade_partner.unique_id] * (self.interactions[self.trade_partner.unique_id] / (self.interactions[self.trade_partner.unique_id] + 1)) 
-                                                        + (trade_offer_agent_b * 1.10) * (1 / (self.interactions[self.trade_partner.unique_id] + 1)), 0, 100) / 100.0
-
-        self.trade_partner.trust_per_trader[self.unique_id] = np.clip(self.trade_partner.trust_per_trader[self.unique_id] * (self.interactions[self.unique_id] / (self.interactions[self.unique_id] + 1)) 
-                                                        + (trade_offer_agent_a * 1.10) * (1 / (self.interactions[self.unique_id] + 1)), 0, 100) / 100.0
+        # # Calculate the new trusts
+        # self.trust_per_trader[self.trade_partner.unique_id] = np.clip(self.trust_per_trader[self.trade_partner.unique_id] * (self.interactions[self.trade_partner.unique_id] / (self.interactions[self.trade_partner.unique_id] + 1))
+        #                                                 + (trade_offer_agent_b * 1.10) * (1 / (self.interactions[self.trade_partner.unique_id] + 1)), 0, 100) / 100.0
+        #
+        # self.trade_partner.trust_per_trader[self.unique_id] = np.clip(self.trade_partner.trust_per_trader[self.unique_id] * (self.interactions[self.unique_id] / (self.interactions[self.unique_id] + 1))
+        #                                                 + (trade_offer_agent_a * 1.10) * (1 / (self.interactions[self.unique_id] + 1)), 0, 100) / 100.0
 
         # print("New trust of agent ", int(self.unique_id), " in agent ", int(agent_b.unique_id), ":\t", self.trust_per_trader[agent_b.unique_id])
         # print("New trust of agent ", int(agent_b.unique_id), " in agent ", int(self.unique_id), ":\t", agent_b.trust_per_trader[self.unique_id], "\n")

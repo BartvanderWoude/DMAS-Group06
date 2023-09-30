@@ -1,53 +1,81 @@
 from mesa import Model
 from trader import TraderAgent
 from mesa.time import RandomActivation
-from mesa.space import MultiGrid
+from mesa.space import MultiGrid, SingleGrid
 import numpy as np
+from strategies import DefaultStrat, NoTrustStrat, LowTrustStrat
+from mesa.datacollection import DataCollector
+from collections import defaultdict
+
 
 class AgentModel(Model):
     """A model with some number of agents."""
 
     def __init__(self, N, width, height):
         self.num_agents = N
-        self.grid = MultiGrid(width, height, True)
+        self.grid = SingleGrid(width, height,
+                               True)  # changed this from multigrid to singlegrid, as 2 agents could spawn at similar locations
         self.schedule = RandomActivation(self)
-        
         self.agent_list = []
+        self.strategies = [DefaultStrat, NoTrustStrat, LowTrustStrat]
+
+        """for visualization"""
+        self.strat_names = ["default", "lowtrust", "notrust", "funds_in_world"]  # hardcoded @TODO should be changed
+        self.agent_dict = defaultdict(list)  # for "sorting" agents by strategy.name
+        self.datacollector = self.data_collector()
 
         # Create agents
-        for i in range(self.num_agents):    #self.num_
-            a = TraderAgent(i, self, 100, np.random.uniform(0,1), {i: np.random.uniform(0.5, 1.0) for i in range(self.num_agents)}, {i: 0 for i in range(self.num_agents)})
+        for i in range(self.num_agents):  # self.num_
+            idx = np.random.randint(0, len(self.strategies))
+            strat = self.strategies[idx]()  # pick random strategy
+
+            a = TraderAgent(unique_id=i,
+                            model=self,
+                            money=100,
+                            honesty=np.random.uniform(0, 1),
+                            trust_per_trader={i: 0.5 for i in range(self.num_agents)},
+                            interactions={i: 0 for i in range(self.num_agents)},
+                            strategies=strat)
+
+            self.agent_dict[strat.name].append(a)  # sort agent by strategy for plotting later
             # Add the agent to the scheduler
             self.schedule.add(a)
 
             self.agent_list.append(a)
-
-            x = self.random.randrange(self.grid.width)
-            y = self.random.randrange(self.grid.height)
-            self.grid.place_agent(a, (x,y))
+            self.grid.move_to_empty(a)
 
     def assignTradePartners(self):
-        np.random.shuffle(self.agent_list)  #shuffle the agents
-        half = int(self.num_agents/2)
+        np.random.shuffle(self.agent_list)  # shuffle the agents
+        half = int(self.num_agents / 2)
         for pair_idx in range(half):
             a1 = self.agent_list[pair_idx]
-            a2 = self.agent_list[pair_idx+half]
+            a2 = self.agent_list[pair_idx + half]
 
             a1.setTradePartner(a2)
             a2.setTradePartner(None)
         return
-    
-    
+
+    def data_collector(self):
+        """method to pass data (per step) to mesa interface, currently showing the sum, and summed money based on strategy"""
+        return DataCollector(
+            {"total_money": lambda m: sum([agent.money for agent in self.agent_list]),
+             "default": lambda m: sum([agent.money for agent in self.agent_dict["default"]]),
+             "lowtrust": lambda m: sum([agent.money for agent in self.agent_dict["lowtrust"]]),
+             "notrust": lambda m: sum([agent.money for agent in self.agent_dict["notrust"]])}
+        )
+
+    def collect_data(self):
+        """method to collect data to visualize later"""
+        data_dictionary = defaultdict(int, {"funds_in_world": 0})
+        for key in self.agent_dict.keys():
+            for agent in self.agent_dict[key]:
+                data_dictionary["funds_in_world"] += agent.money
+                data_dictionary[key] += agent.money
+
+        self.datacollector.add_table_row(table_name="growth_over_time", row=data_dictionary, ignore_missing=True)
+
     # Iteration
     def step(self):
-        
-        self.assignTradePartners() # Set up duo's
-        
-        self.schedule.step()    #perform agent actions
-
-
-        
-        
-
-# model = AgentModel(10, 10, 10)
-# model.step()
+        self.assignTradePartners()  # Set up duo's
+        self.schedule.step()  # perform agent actions
+        self.datacollector.collect(self)
