@@ -14,14 +14,14 @@ def calculateTrust(agent, partner, witness):
     tactic = agent.strategies.trust_tactic
 
     if  tactic == 'standard':
-        trust = trust_in_partner + witness_trust_in_partner  #standaard
+        trust = (trust_in_partner + witness_trust_in_partner) /2  #standaard
     elif tactic == 'not_trust_witness':
         trust = trust_in_partner
     elif tactic == 'partially_trust_witness':
-        trust = ((trust_in_witness + witness_trust_in_partner) / 2) + trust_in_partner
+        trust = (((trust_in_witness + witness_trust_in_partner) / 2) + trust_in_partner) /2
     else:
         raise NotImplementedError
-    return trust / 2
+    return trust 
 
 def calculateWitness(all_agents, agent_a, agent_b, used_witness = None):
     """Method to pick the used witness for agent_a, based on strategy
