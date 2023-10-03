@@ -24,6 +24,11 @@ class AgentModel(Model):
         self.agent_list = []
 
         self.strategies = [DefaultStrat, NoTrustStrat, LowTrustStrat]
+        #Adjust this parameter when you want to have limited vision for each agent
+        self.neighbourhood = False
+
+
+        self.strategies = [DefaultStrat, NoTrustStrat, LowTrustStrat]
         self.strategy_dict = {"default": DefaultStrat, "lowtrust": LowTrustStrat, "notrust": NoTrustStrat}
         """for visualization"""
         self.strat_names = ["default", "lowtrust", "notrust", "funds_in_world"]  # hardcoded @TODO should be changed

@@ -1,17 +1,7 @@
-from typing import Dict, Type
-
-import solara
-from matplotlib.figure import Figure
-from mesa import Model
 from mesa.visualization.ModularVisualization import ModularServer
-from mesa.visualization.UserParam import NumberInput
-from functools import partial
-from tqdm.auto import tqdm
 
 from model import AgentModel
 from mesa.visualization.modules import CanvasGrid, ChartModule
-from mesa.datacollection import DataCollector
-import plotly.graph_objects as go
 
 
 def agent_portrayal(agent):
@@ -20,11 +10,6 @@ def agent_portrayal(agent):
     portrayal["Layer"] = 0
 
     portrayal["r"] = max(0.01, min(1, (agent.money / 1000)))
-
-    if agent.trading:
-        portrayal["Color"] = "red"
-        portrayal["Layer"] = 0
-
     return portrayal
 
 

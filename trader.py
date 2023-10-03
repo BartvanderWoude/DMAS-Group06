@@ -4,6 +4,8 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 from copy import deepcopy
+import math
+from movement_techniques import *
 
 def calculateTrust(agent, partner, witness):
     """Method to calculate the trust value of trade partner (target agent) based on strategy"""
@@ -30,6 +32,18 @@ def calculateWitness(all_agents, agent_a, agent_b, used_witness = None):
     if agent_a.witness_tactic == 'standard':
         agent = random.choice([agent for agent in all_agents if (agent != agent_a and agent != agent_b and agent != used_witness)])
     return agent
+
+def get_agents_within_radius(agent, agent_list):
+    agents_within = []
+
+    for other_agent in agent_list:
+            distance = math.sqrt((agent.pos[0] - other_agent.pos[0])**2 + (agent.pos[1] - other_agent.pos[1])**2)
+            # print("id\t", self.unique_id, "dist\t", distance, "radius\t", self.radius)
+            if distance <= agent.radius:
+                agents_within.append(other_agent)
+
+    return agents_within
+
 
 # Alternative way to find witnesses
 def findWitness(agent, agent_list):
@@ -63,14 +77,13 @@ class TraderAgent(mesa.Agent):
     def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions, strategies=None):
         # Pass the parameters to the parent class.
         super().__init__(unique_id, model)
-        self.id = id
         self.model = model
         self.money = money # int start 100
         self.honesty = honesty # float 0 - 1
         self.trust_per_trader = trust_per_trader # array (or list?) float for each trader start 0.5
         self.interactions = interactions
-        self.trading = False
-        self.witnessing = False
+        self.move = True
+        self.radius = 3
         self.trade_partner = None
 
         """tactics, should be changed later maybe"""
@@ -85,6 +98,30 @@ class TraderAgent(mesa.Agent):
         self.trade_partner = partnerObj
         return
 
+    def move_to_random_spot(self):
+        while True:
+            new_x = random.randint(0, self.model.grid.width - 1)
+            new_y = random.randint(0, self.model.grid.height - 1)
+
+            # Check if the cell is occupied by any agent
+            is_occupied = any(agent.pos == (new_x, new_y) for agent in self.model.schedule.agents)
+
+            if not is_occupied:
+                self.model.grid.move_agent(self, (new_x, new_y))
+                break
+
+    def random_walk(self):
+        dx, dy = random.choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
+        new_x = max(0, min(self.model.grid.width - 1, self.pos[0] + dx))
+        new_y = max(0, min(self.model.grid.height - 1, self.pos[0] + dy))
+
+        # Check if the cell is occupied by any agent
+        is_occupied = any(agent.pos == (new_x, new_y) for agent in self.model.schedule.agents)
+
+        if not is_occupied:
+            self.model.grid.move_agent(self, (new_x, new_y))
+
+    
     def step(self):
         if self.trade_partner is None:
             return
@@ -94,9 +131,17 @@ class TraderAgent(mesa.Agent):
         available_agents.remove(self)
         available_agents.remove(self.trade_partner)
 
-        witness_agent_a = findWitness(agent=self, agent_list=available_agents)
-        witness_agent_b = findWitness(agent=self.trade_partner, agent_list=available_agents)
- 
+        #If neighbourhood is True, the agent has a specific radius in which it can choose its witnesses
+        if self.model.neighbourhood:
+            agents_within_a = get_agents_within_radius(agent=self, agent_list=available_agents)
+            agents_within_b = get_agents_within_radius(agent=self.trade_partner, agent_list=available_agents)
+            witness_agent_a = findWitness(agent=self, agent_list=agents_within_a)
+            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=agents_within_b)
+
+        else:
+            witness_agent_a = findWitness(agent=self, agent_list=available_agents)
+            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=available_agents)
+
         #TRADE PART
         #Trust_in_agent_b = trust_in_witness_a * trust_of_witness_a
         
@@ -129,3 +174,7 @@ class TraderAgent(mesa.Agent):
 
         # print("New trust of agent ", int(self.unique_id), " in agent ", int(agent_b.unique_id), ":\t", self.trust_per_trader[agent_b.unique_id])
         # print("New trust of agent ", int(agent_b.unique_id), " in agent ", int(self.unique_id), ":\t", agent_b.trust_per_trader[self.unique_id], "\n")
+
+        #Moving an agent makes only makes sense if the agent has a neighbourhood.
+        if self.model.neighbourhood:
+            movement_techniques(self, self.model, self.radius)
