@@ -16,11 +16,6 @@ def agent_portrayal(agent):
     portrayal["Layer"] = 0
 
     portrayal["r"] = max(0.01, min(1, (agent.money / 1000)))
-
-    if agent.trading:
-        portrayal["Color"] = "red"
-        portrayal["Layer"] = 0
-
     return portrayal
 
 

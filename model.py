@@ -18,6 +18,8 @@ class AgentModel(Model):
         self.schedule = RandomActivation(self)
         self.agent_list = []
         self.strategies = [DefaultStrat, NoTrustStrat, LowTrustStrat]
+        #Adjust this parameter when you want to have limited vision for each agent
+        self.neighbourhood = False
 
         """for visualization"""
         self.strat_names = ["default", "lowtrust", "notrust", "funds_in_world"]  # hardcoded @TODO should be changed
