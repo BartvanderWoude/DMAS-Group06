@@ -1,13 +1,17 @@
+from typing import Dict, Type
+
 import solara
 from matplotlib.figure import Figure
+from mesa import Model
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import NumberInput
+from functools import partial
+from tqdm.auto import tqdm
 
 from model import AgentModel
 from mesa.visualization.modules import CanvasGrid, ChartModule
 from mesa.datacollection import DataCollector
 import plotly.graph_objects as go
-
 
 
 def agent_portrayal(agent):
@@ -24,17 +28,18 @@ def agent_portrayal(agent):
     return portrayal
 
 
-grid = CanvasGrid(agent_portrayal, 10, 10, 500, 500)
-chart = ChartModule([
+if __name__ == '__main__':
+    grid = CanvasGrid(agent_portrayal, 10, 10, 500, 500)
+    chart = ChartModule([
         {"Label": "total_money", "Color": "black"},
         {"Label": "default", "Color": "green"},
         {"Label": "notrust", "Color": "red"},
         {"Label": "lowtrust", "Color": "blue"}], data_collector_name="datacollector"
     )
 
-server = ModularServer(AgentModel,
-                       [grid, chart],
-                       "Traders Model",
-                       {"N": 50, "width": 10, "height": 10})
-server.port = 8521  # The default
-server.launch()
+    server = ModularServer(AgentModel,
+                           [grid, chart],
+                           "Traders Model",
+                           {"N": 50, "width": 10, "height": 10})
+    server.port = 8521  # The default
+    server.launch()
