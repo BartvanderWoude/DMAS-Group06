@@ -1,5 +1,3 @@
-import solara
-from matplotlib.figure import Figure
 from mesa.visualization.ModularVisualization import ModularServer
 import mesa
 
@@ -7,9 +5,6 @@ import mesa
 
 from model import AgentModel
 from mesa.visualization.modules import CanvasGrid, ChartModule
-from mesa.datacollection import DataCollector
-import plotly.graph_objects as go
-
 
 
 def agent_portrayal(agent):
@@ -21,8 +16,9 @@ def agent_portrayal(agent):
     return portrayal
 
 
-grid = CanvasGrid(agent_portrayal, 10, 10, 500, 500)
-chart = ChartModule([
+if __name__ == '__main__':
+    grid = CanvasGrid(agent_portrayal, 10, 10, 500, 500)
+    chart = ChartModule([
         {"Label": "total_money", "Color": "black"},
         {"Label": "default", "Color": "green"},
         {"Label": "notrust", "Color": "red"},

@@ -23,7 +23,7 @@ def calculateTrust(agent, partner, witness):
         trust = (((trust_in_witness + witness_trust_in_partner) / 2) + trust_in_partner) /2
     else:
         raise NotImplementedError
-    return trust 
+    return trust
 
 def calculateWitness(all_agents, agent_a, agent_b, used_witness = None):
     """Method to pick the used witness for agent_a, based on strategy
