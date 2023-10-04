@@ -13,8 +13,7 @@ from collections import defaultdict
 class AgentModel(Model):
     """A model with some number of agents."""
 
-    def __init__(self, N=50, width=10, height=10, strategies: Dict[str, int] = None):
-        # Default = True, LowTrust = False, NoTrust = False, 
+    def __init__(self, N=50, Default = True, LowTrust = True, NoTrust = True,  width=10, height=10, strategies: Dict[str, int] = None):
         super(AgentModel, self).__init__()
         self.num_agents = N
         self.agent_distribution = strategies  #create distribution of agents with certain strategies
@@ -23,20 +22,19 @@ class AgentModel(Model):
                                True)  # changed this from multigrid to singlegrid, as 2 agents could spawn at similar locations
         self.schedule = RandomActivation(self)
         self.agent_list = []
-        # self.strategies = []
-        # if Default:
-        #     self.strategies.append(DefaultStrat)
-        # if NoTrust:
-        #     self.strategies.append(NoTrustStrat)
-        # if LowTrust:
-        #     self.strategies.append(LowTrustStrat)
+        self.strategies = []
+        self.strategy_dict = {"default": DefaultStrat, "lowtrust": LowTrustStrat, "notrust": NoTrustStrat}
+        if Default:
+            self.strategies.append(DefaultStrat)
+        if NoTrust:
+            self.strategies.append(NoTrustStrat)
+        if LowTrust:
+            self.strategies.append(LowTrustStrat)
 
         #Adjust this parameter when you want to have limited vision for each agent
         self.neighbourhood = False
 
-
-        self.strategies = [DefaultStrat, NoTrustStrat, LowTrustStrat]
-        self.strategy_dict = {"default": DefaultStrat, "lowtrust": LowTrustStrat, "notrust": NoTrustStrat}
+        
         """for visualization"""
         self.strat_names = ["default", "lowtrust", "notrust", "funds_in_world"]  # hardcoded @TODO should be changed
         self.agent_dict = defaultdict(list)  # for "sorting" agents by strategy.name
