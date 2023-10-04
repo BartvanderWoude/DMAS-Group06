@@ -1,4 +1,7 @@
 from mesa.visualization.ModularVisualization import ModularServer
+import mesa
+
+
 
 from model import AgentModel
 from mesa.visualization.modules import CanvasGrid, ChartModule
@@ -22,9 +25,20 @@ if __name__ == '__main__':
         {"Label": "lowtrust", "Color": "blue"}], data_collector_name="datacollector"
     )
 
-    server = ModularServer(AgentModel,
-                           [grid, chart],
-                           "Traders Model",
-                           {"N": 50, "width": 10, "height": 10})
-    server.port = 8521  # The default
-    server.launch()
+model_params = {
+    "N": mesa.visualization.Slider(
+        "Number of agents:", 50, 1, 100, description="Initial Number of People"
+    ),
+    "Default": mesa.visualization.Checkbox("Default agents", True),
+    "LowTrust": mesa.visualization.Checkbox("Low trust agents", False),
+    "NoTrust": mesa.visualization.Checkbox("Untrustful agents", False),
+    "width":10,
+    "height":10
+}
+server = ModularServer(AgentModel,
+                       [grid, chart],
+                       "Traders Model",
+                       model_params)
+# {"N": 50, "width": 10, "height": 10}
+server.port = 8521  # The default
+server.launch()

@@ -13,7 +13,7 @@ from collections import defaultdict
 class AgentModel(Model):
     """A model with some number of agents."""
 
-    def __init__(self, N, width, height, strategies: Dict[str, int] = None):
+    def __init__(self, N=50, Default = True, LowTrust = False, NoTrust = False, width=10, height=10, strategies: Dict[str, int] = None):
         super(AgentModel, self).__init__()
         self.num_agents = N
         self.agent_distribution = strategies  #create distribution of agents with certain strategies
@@ -22,8 +22,14 @@ class AgentModel(Model):
                                True)  # changed this from multigrid to singlegrid, as 2 agents could spawn at similar locations
         self.schedule = RandomActivation(self)
         self.agent_list = []
+        self.strategies = []
+        if Default:
+            self.strategies.append(DefaultStrat)
+        if NoTrust:
+            self.strategies.append(NoTrustStrat)
+        if LowTrust:
+            self.strategies.append(LowTrustStrat)
 
-        self.strategies = [DefaultStrat, NoTrustStrat, LowTrustStrat]
         #Adjust this parameter when you want to have limited vision for each agent
         self.neighbourhood = False
 
