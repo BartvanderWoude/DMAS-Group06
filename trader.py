@@ -6,32 +6,8 @@ import pandas as pd
 from copy import deepcopy
 import math
 from movement_techniques import *
+import custom_strategies as cusStrat
 
-def calculateTrust(agent, partner, witness):
-    """Method to calculate the trust value of trade partner (target agent) based on strategy"""
-    trust_in_partner = agent.trust_per_trader[partner.unique_id]
-    trust_in_witness = agent.trust_per_trader[witness.unique_id]
-    witness_trust_in_partner = witness.trust_per_trader[partner.unique_id]
-
-    tactic = agent.strategies.trust_tactic
-
-    if  tactic == 'standard':
-        trust = (trust_in_partner + witness_trust_in_partner) /2  #standaard
-    elif tactic == 'not_trust_witness':
-        trust = trust_in_partner
-    elif tactic == 'partially_trust_witness':
-        trust = (((trust_in_witness + witness_trust_in_partner) / 2) + trust_in_partner) /2
-    else:
-        raise NotImplementedError
-    return trust
-
-def calculateWitness(all_agents, agent_a, agent_b, used_witness = None):
-    """Method to pick the used witness for agent_a, based on strategy
-       @TODO revisit method later"""
-
-    if agent_a.witness_tactic == 'standard':
-        agent = random.choice([agent for agent in all_agents if (agent != agent_a and agent != agent_b and agent != used_witness)])
-    return agent
 
 def get_agents_within_radius(agent, agent_list):
     agents_within = []
@@ -44,19 +20,24 @@ def get_agents_within_radius(agent, agent_list):
 
     return agents_within
 
-
-# Alternative way to find witnesses
+# This has no mechanic yet
 def findWitness(agent, agent_list):
-    if agent.witness_tactic == "standard":
-        witness = random.choice(agent_list)
-    if agent.witness_tactic == "high_trust":
+    tactic = "standard"
+    if tactic == "standard":
+        witness = np.random.choice(agent_list)
+    elif tactic == "implement here":
         raise NotImplementedError
-    agent_list.remove(witness)
+    else:
+        raise NotImplementedError
+    agent_list.remove(witness) # Removes it from the original list, so no need to return the list
     return witness
 
 def calculateOffer(agent, trust_in_target_agent):
-    if agent.offer_tactic == "standard":
-        return np.clip(trust_in_target_agent * agent.honesty * 100, 0, 100)
+    tactic = agent.custom_strategies['offer']
+    if tactic == "standard":
+        return np.clip(((trust_in_target_agent + agent.honesty)/2) * 100, 0, 100)
+    elif tactic == "extra1":
+        return np.clip(((trust_in_target_agent + agent.honesty)/2) * 100, 0, 100)
     else:
         raise NotImplementedError
 
@@ -64,17 +45,48 @@ def calculateOffer(agent, trust_in_target_agent):
 #   standard: only update your trust in the trading partner
 #   include_witness: include the witness to some extent (same as partner or less? more?)
 def updateTrustValues(agent, gain_or_loss, partner, witness):
-    if agent.trust_update_tactic == "standard":
+    tactic = agent.custom_strategies['trust_update']
+    if tactic == "standard":
         trust_update_value = gain_or_loss/5
         current_trust = agent.trust_per_trader[partner.unique_id]
+        agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust+ trust_update_value))
+    elif tactic == "witness_included":
+        trust_update_value = gain_or_loss/5
+        current_trust = agent.trust_per_trader[partner.unique_id]
+        agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust+ trust_update_value))
+        current_witness_trust = agent.trust_per_trader[witness.unique_id]
+        agent.trust_per_trader[witness.unique_id] = max(0, min(100, current_witness_trust+ trust_update_value))
+    elif tactic == "critical":
+        current_trust = agent.trust_per_trader[partner.unique_id]
+        trust_update_value = (gain_or_loss/5)*(0.1*current_trust)
+        agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust+ trust_update_value))
     else:
         raise NotImplementedError
-    agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust+ trust_update_value))
     return
+
+    
+def calculateTrust(agent, partner, witness):
+    """Method to calculate the trust value of trade partner (target agent) based on strategy"""
+    trust_in_partner = agent.trust_per_trader[partner.unique_id]
+    trust_in_witness = agent.trust_per_trader[witness.unique_id]
+    witness_trust_in_partner = witness.trust_per_trader[partner.unique_id]
+
+    tactic = agent.custom_strategies['witness']
+    # agent.strategies.trust_tactic # TODO: this is not implemented yet
+
+    if  tactic == 'standard':
+        trust = (trust_in_partner + witness_trust_in_partner) /2  #standaard
+    elif tactic == 'skeptic':
+        trust = (((trust_in_witness + witness_trust_in_partner) / 2) + trust_in_partner) /2
+    elif tactic == 'naive':
+        trust = witness_trust_in_partner
+    else:
+        raise NotImplementedError
+    return trust
 
 
 class TraderAgent(mesa.Agent):
-    def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions, strategies=None):
+    def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions, strategies=None, customizedStrategies = {}):
         # Pass the parameters to the parent class.
         super().__init__(unique_id, model)
         self.model = model
@@ -86,13 +98,8 @@ class TraderAgent(mesa.Agent):
         self.radius = 3
         self.trade_partner = None
 
-        """tactics, should be changed later maybe"""
-        self.strategies = strategies    #combined strategies
-        self.strat_color = strategies.strat_color   #for visuals
-
-        self.witness_tactic = "standard"
-        self.trust_update_tactic = "standard"
-        self.offer_tactic = "standard"
+        self.custom_strategies = customizedStrategies # TODO: remove double var allocation once done implementing
+        self.cs = cusStrat.CustomStrategies()
             
     def setTradePartner(self, partnerObj):
         self.trade_partner = partnerObj
@@ -139,6 +146,7 @@ class TraderAgent(mesa.Agent):
             witness_agent_b = findWitness(agent=self.trade_partner, agent_list=agents_within_b)
 
         else:
+            # witness_agent_a = self.cs.mechanics['witness'].findWitness(agent=self, agent_list=available_agents) # TODO: fix or switch to implementing all strategies in this file
             witness_agent_a = findWitness(agent=self, agent_list=available_agents)
             witness_agent_b = findWitness(agent=self.trade_partner, agent_list=available_agents)
 
@@ -146,22 +154,27 @@ class TraderAgent(mesa.Agent):
         #Trust_in_agent_b = trust_in_witness_a * trust_of_witness_a
         
         # Your trust in trade partner + your witness' trust in trade partner
+        # trust_in_agent_b = self.cs.mechanics['trust_update'].calculateTrust(agent=self.trade_partner, parner=self, witness=witness_agent_a) # TODO: fix or switch to implementing all strategies in this file
         trust_in_agent_b = calculateTrust(self, self.trade_partner, witness_agent_a)
         trust_in_agent_a = calculateTrust(self.trade_partner, self, witness_agent_b)
 
         # Calculate trade offers
+        # trade_offer_agent_a = self.cs.mechanics['offer'].calculateOffer(self, trust_in_agent_b) # TODO: fix or switch to implementing all strategies in this file
         trade_offer_agent_a = calculateOffer(self, trust_in_agent_b)
         trade_offer_agent_b = calculateOffer(self.trade_partner, trust_in_agent_a)
 
         # Calculate new funds
         my_money_change = (trade_offer_agent_b * 1.10) - trade_offer_agent_a
         self.money = self.money + my_money_change
+
         partner_money_change = (trade_offer_agent_a * 1.10) - trade_offer_agent_b
         self.trade_partner.money = self.trade_partner.money + partner_money_change
 
         # Function that sets trust to new value, allows different tactics
         # This sets the new trust for Agent A
         # Alternative function by Thijs
+
+        # self.cs['trust_update'].updateTrustValues(self, my_money_change, self.trade_partner, witness_agent_a) # TODO: fix or switch to implementing all strategies in this file
         updateTrustValues(self, my_money_change, self.trade_partner, witness_agent_a)       #update agent A
         updateTrustValues(self.trade_partner, partner_money_change, self, witness_agent_b)  #update agent B
 

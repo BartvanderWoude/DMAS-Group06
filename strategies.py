@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod  # Built in. No install needed.
 from typing import Dict
 
-
 class DefaultStrat:
     def __init__(self):
         self.name = "default"
@@ -25,6 +24,6 @@ class LowTrustStrat():
         self.name = "lowtrust"
         self.description = "Agent who doesnt trust his witness for a 100 percent"
         self.strat_color = "blue"
-        self.trust_tactic = "not_trust_witness"
+        self.trust_tactic = "not_trust_witness" 
         self.witness_tactic = "standard"
         self.trust_update_tactic = "standard"

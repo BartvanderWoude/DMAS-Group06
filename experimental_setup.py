@@ -32,6 +32,9 @@ def get_strategies(total_agents=50, env_count=3) -> List[Dict[str, int]]:
 
     return strats
 
+def get_(total_agents=50, env_count=3) -> List[Dict[str, int]]:
+    pass
+
 
 def get_parameters(env_count: int = 4, N=50) -> List[Dict[str, Any]]:
     """method to get the parameters for each environment (mainly hardcoded)"""
