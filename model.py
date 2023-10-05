@@ -9,6 +9,8 @@ from strategies import DefaultStrat, NoTrustStrat, LowTrustStrat
 from mesa.datacollection import DataCollector
 from collections import defaultdict
 from scipy.special import softmax
+import custom_strategies as CS
+import math
 
 
 class AgentModel(Model):
@@ -24,22 +26,12 @@ class AgentModel(Model):
         self.schedule = RandomActivation(self)
         self.agent_list = []
 
-        # Thijs' implementation of strategies
-        self.strategy_distribution = strategyDistribution   # DICT with << strategy topic""": distribution per strategy of that topic [] >>
-                                                            # Like {"witness: [23 27 0]"}
-
-        self.custom_strategies = CustomStrategies # OBJ     # Contains all strategies and their methods
-
         if not strategyDistribution:
-            self.strategies = []
-            self.strategy_dict = {"default": DefaultStrat, "lowtrust": LowTrustStrat, "notrust": NoTrustStrat}
-            if Default:
-                self.strategies.append(DefaultStrat)
-            if NoTrust:
-                self.strategies.append(NoTrustStrat)
-            if LowTrust:
-                self.strategies.append(LowTrustStrat)
-
+            self.manually_set_distribution()
+        else:
+            self.strategy_distribution = strategyDistribution
+            self.custom_strategies = CustomStrategies
+        
         #Adjust this parameter when you want to have limited vision for each agent
         self.neighbourhood = False
 
@@ -48,31 +40,40 @@ class AgentModel(Model):
         self.agent_dict = defaultdict(list)  # for "sorting" agents by strategy.name
         self.datacollector = self.data_collector()
 
-        # Create agents
-        if self.strategy_distribution:
-            self.setup_agents()
-            return
-        else:
-            print("No agent_distribution, initializing agents randomly from 3 classes")
+        # Create agents according to self.strategy_distribution
+        self.setup_agents()
 
-            for i in range(self.num_agents):  # self.num_
-                idx = np.random.randint(0, len(self.strategies))
-                strat = self.strategies[idx]()  # pick random strategy
+    def manually_set_distribution(self):
+        cs = CS.CustomStrategies() # comment this in order to use the older (preset) strategies system
+        # cs = {} # comment this to use the newer (customizable) strategies system
 
-                a = TraderAgent(unique_id=i,
-                                model=self,
-                                money=100,
-                                honesty=np.random.uniform(0, 1),
-                                trust_per_trader={i: 0.5 for i in range(self.num_agents)},
-                                interactions={i: 0 for i in range(self.num_agents)},
-                                strategies=strat)
+        # Number of agents divided by number of classes - to create even distributions per stratety         
+        ####### TODO CHANGE THIS TO IMPLEMENT CUSTOM STRATEGY-DISTRIBUTIONS
 
-                self.agent_dict[strat.name].append(a)  # sort agent by strategy for plotting later
-                # Add the agent to the scheduler
-                self.schedule.add(a)
+        # This creates an even distribution of strategies over all the agents
+        strat_distributions = []
+        # A mechanic = offer, witness, trust_update
+        for i, mechanic in enumerate(cs.mechanics):
+            # Strategies can be "standard", "lowball", "dont_trust_witness"
+            strats_of_this_mechanic = cs.mechanics[mechanic].strategies
+            # Calculate the number of agents that will get each strategy (THIS DETERMINES THE EVEN DISTRIBUTION)
+            n_agents_per_mechanic_strategy = self.num_agents / len(strats_of_this_mechanic) # 
+            # This creates the distribution: 50 agents, 3 strategies --> [17, 16, 16]
+            strat_distribution = [math.ceil(n_agents_per_mechanic_strategy) if strat == 0 else math.floor(n_agents_per_mechanic_strategy) for strat in range(len(strats_of_this_mechanic))]
+            strat_distributions.append(strat_distribution)
 
-                self.agent_list.append(a)
-                self.grid.move_to_empty(a)
+        ####### TODO-END
+
+        # This converts the distributions into a dictionary. The dictionary contains the mechanics (trade offer, update trust, etc) and for each of those, how many agents will get whatever mechanic
+        distributions_per_mechanic = {}
+        for i, mechanic in enumerate(cs.mechanics):
+            distributions_per_mechanic[mechanic] = strat_distributions[i]
+
+        # Thijs' implementation of strategies
+        self.strategy_distribution = distributions_per_mechanic   # DICT with << strategy topic""": distribution per strategy of that topic [] >>
+                                                            # Like {"witness: [23 27 0]"}
+
+        self.custom_strategies = cs # OBJ     # Contains all strategies and their methods
 
     def setup_agents(self):
         print("SETUP AGENTS")
@@ -95,25 +96,7 @@ class AgentModel(Model):
                 self.schedule.add(a)
                 self.agent_list.append(a)
                 self.grid.move_to_empty(a)
-        else: # Init the agents using the 3 preset strategy classes from strategies.py (implemented in experimental_setup)
-            agent_idx = 0
-            for key, value in self.agent_distribution.items():
-                for idx in range(value):
-                    strat = self.strategy_dict[key]()  # pick strategy and create instance
-
-                    a = TraderAgent(unique_id=agent_idx,
-                                    model=self,
-                                    money=100,
-                                    honesty=np.random.uniform(0, 1),
-                                    trust_per_trader={i: 0.5 for i in range(self.num_agents)},
-                                    interactions={i: 0 for i in range(self.num_agents)},
-                                    strategies=strat)
-
-                    self.agent_dict[strat.name].append(a)  # sort agent by strategy for plotting later
-                    self.schedule.add(a)
-                    self.agent_list.append(a)
-                    self.grid.move_to_empty(a)
-                    agent_idx += 1
+        return
 
     # Works, output is a DICT of mechanics and their strategies --> {'witness': 'standard', ...}
     def pickAgentStrats(self):
@@ -141,6 +124,8 @@ class AgentModel(Model):
             a2.setTradePartner(None)
         return
 
+
+    # TODO: this plots the categories of agents - todo is to plot each combination of properties (each variety of agent)
     def data_collector(self):
         """method to pass data (per step) to mesa interface, currently showing the sum, and summed money based on strategy"""
         return DataCollector(

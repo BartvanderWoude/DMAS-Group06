@@ -8,9 +8,21 @@ from mesa.visualization.modules import CanvasGrid, ChartModule
 
 
 def agent_portrayal(agent):
-    portrayal = {"Shape": "circle", "Filled": "true"}
-    portrayal["Color"] = agent.strat_color
+    portrayal = {"Filled": "true"}
+    # Can only do 2 shapes properly
+    portrayal["Shape"] = agent.cs.mechanics["offer"].shapes[agent.custom_strategies["offer"]]
+    # portrayal["Shape"] = "circle"
+    # Can do infinetely many colors
+    portrayal["Color"] = agent.cs.mechanics["witness"].colors[agent.custom_strategies["witness"]]
+    # Can do infinitely many texts, though it doesnt show properly (on the plotted shape)
+    portrayal["Text"] = agent.cs.mechanics["trust_update"].text[agent.custom_strategies["trust_update"]]
+    # portrayal["Text"] = "x"
+    # portrayal["Text_color"] = "blue"
     portrayal["Layer"] = 0
+
+    # if portrayal["Shape"] == "arrowHead":
+    portrayal["w"] = 0.9*max(0.01, min(1, (agent.money / 1000)))
+    portrayal["h"] = 0.9*max(0.01, min(1, (agent.money / 1000)))
 
     portrayal["r"] = max(0.01, min(1, (agent.money / 1000)))
     return portrayal
@@ -25,8 +37,6 @@ if __name__ == '__main__':
         {"Label": "lowtrust", "Color": "blue"}], data_collector_name="datacollector"
     )
 
-cs = CustomStrategies() # comment this in order to use the older (preset) strategies system
-# cs = {} # comment this to use the newer (customizable) strategies system
 
 # Model visuals
 model_params = {
@@ -40,46 +50,50 @@ model_params = {
     "height":10
 }
 
-# agent_model = AgentModel()
+# Attempt at implementing the distribution calculation here (because you have the model params available here)
 
-if cs:
-    # Number of agents divided by number of classes - to create even distributions per stratety         
-    ####### TODO CHANGE THIS TO IMPLEMENT CUSTOM STRATEGY-DISTRIBUTIONS
+# cs = CustomStrategies() # comment this in order to use the older (preset) strategies system
+# # cs = {} # comment this to use the newer (customizable) strategies system
 
-    # This creates an even distribution of strategies over all the agents
-    strat_distributions = []
-    # A mechanic = offer, witness, trust_update
-    for i, mechanic in enumerate(cs.mechanics):
-        # Strategies can be "standard", "lowball", "dont_trust_witness"
-        strats_of_this_mechanic = cs.mechanics[mechanic].strategies
-        # Calculate the number of agents that will get each strategy (THIS DETERMINES THE EVEN DISTRIBUTION)
-        n_agents_per_mechanic_strategy = model_params["N"].value / len(strats_of_this_mechanic) # 
-        # This creates the distribution: 50 agents, 3 strategies --> [17, 16, 16]
-        strat_distribution = [math.ceil(n_agents_per_mechanic_strategy) if strat == 0 else math.floor(n_agents_per_mechanic_strategy) for strat in range(len(strats_of_this_mechanic))]
-        strat_distributions.append(strat_distribution)
+# if cs:
+#     # Number of agents divided by number of classes - to create even distributions per stratety         
+#     ####### TODO CHANGE THIS TO IMPLEMENT CUSTOM STRATEGY-DISTRIBUTIONS
+
+#     # This creates an even distribution of strategies over all the agents
+#     strat_distributions = []
+#     # A mechanic = offer, witness, trust_update
+#     for i, mechanic in enumerate(cs.mechanics):
+#         # Strategies can be "standard", "lowball", "dont_trust_witness"
+#         strats_of_this_mechanic = cs.mechanics[mechanic].strategies
+#         # Calculate the number of agents that will get each strategy (THIS DETERMINES THE EVEN DISTRIBUTION)
+#         n_agents_per_mechanic_strategy = model_params["N"].value / len(strats_of_this_mechanic) # 
+#         # This creates the distribution: 50 agents, 3 strategies --> [17, 16, 16]
+#         strat_distribution = [math.ceil(n_agents_per_mechanic_strategy) if strat == 0 else math.floor(n_agents_per_mechanic_strategy) for strat in range(len(strats_of_this_mechanic))]
+#         strat_distributions.append(strat_distribution)
         
 
-        ##  Earlier version, calculate how many agents should get a certain strategy
-    # w = model_params["N"].value / len(cs.witness_strategies)
-    # o = model_params["N"].value / len(cs.offer_strategies)
-    # t = model_params["N"].value / len(cs.trust_update_strategies)
-    # strats = [w, o, t]
+#         ##  Earlier version, calculate how many agents should get a certain strategy
+#     # w = model_params["N"].value / len(cs.witness_strategies)
+#     # o = model_params["N"].value / len(cs.offer_strategies)
+#     # t = model_params["N"].value / len(cs.trust_update_strategies)
+#     # strats = [w, o, t]
 
-    # # Ceil & floor ensure that 1/3 of 50 (16.33) = [17 (ceil), 16 (floor), 16 (floor)]
-    # w_even_distribution = [math.ceil(w) if strat == 0 else math.floor(w) for strat in range(len(cs.witness_strategies))]
-    # o_even_distribution = [math.ceil(o) if strat == 0 else math.floor(o) for strat in range(len(cs.offer_strategies))]
-    # t_even_distribution =  [math.ceil(t) if strat == 0 else math.floor(t) for strat in range(len(cs.trust_update_strategies))]
+#     # # Ceil & floor ensure that 1/3 of 50 (16.33) = [17 (ceil), 16 (floor), 16 (floor)]
+#     # w_even_distribution = [math.ceil(w) if strat == 0 else math.floor(w) for strat in range(len(cs.witness_strategies))]
+#     # o_even_distribution = [math.ceil(o) if strat == 0 else math.floor(o) for strat in range(len(cs.offer_strategies))]
+#     # t_even_distribution =  [math.ceil(t) if strat == 0 else math.floor(t) for strat in range(len(cs.trust_update_strategies))]
 
-    ####### TODO-END
+#     ####### TODO-END
 
-    # This converts the distributions into a dictionary. The dictionary contains the mechanics (trade offer, update trust, etc) and for each of those, how many agents will get whatever mechanic
-    distributions_per_mechanic = {}
-    for i, mechanic in enumerate(cs.mechanics):
-        distributions_per_mechanic[mechanic] = strat_distributions[i]
+#     # This converts the distributions into a dictionary. The dictionary contains the mechanics (trade offer, update trust, etc) and for each of those, how many agents will get whatever mechanic
+#     distributions_per_mechanic = {}
+#     for i, mechanic in enumerate(cs.mechanics):
+#         distributions_per_mechanic[mechanic] = strat_distributions[i]
 
-    agent_model =  AgentModel(strategyDistribution=distributions_per_mechanic, CustomStrategies=cs)
+#     agent_model =  AgentModel()
+#     # agent_model.set_distribution(strategy_distribution=distributions_per_mechanic, custom_strategies=cs)
 
-server = ModularServer(AgentModel(strategyDistribution=distributions_per_mechanic, CustomStrategies=cs)
+server = ModularServer(AgentModel,
                        [grid, chart],
                        "Traders Model",
                        model_params)
