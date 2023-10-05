@@ -13,33 +13,42 @@ def get_agents_within_radius(agent, agent_list):
     agents_within = []
 
     for other_agent in agent_list:
-            distance = math.sqrt((agent.pos[0] - other_agent.pos[0])**2 + (agent.pos[1] - other_agent.pos[1])**2)
-            # print("id\t", self.unique_id, "dist\t", distance, "radius\t", self.radius)
-            if distance <= agent.radius:
-                agents_within.append(other_agent)
+        distance = math.sqrt((agent.pos[0] - other_agent.pos[0]) ** 2 + (agent.pos[1] - other_agent.pos[1]) ** 2)
+        # print("id\t", self.unique_id, "dist\t", distance, "radius\t", self.radius)
+        if distance <= agent.radius:
+            agents_within.append(other_agent)
 
     return agents_within
 
+
 # This has no mechanic yet
-def findWitness(agent, agent_list):
-    tactic = "standard"
+def findWitness(agent, agent_list, id_trader):
+    tactic = agent.custom_strategies['getwitness']
     if tactic == "standard":
         witness = np.random.choice(agent_list)
-    elif tactic == "implement here":
-        raise NotImplementedError
+    elif tactic == "highvalue": #TODO make this working, gets error when removing from the agent_list below
+        temp_dict = {index: value for index, value in enumerate(agent.trust_per_trader)}
+        temp_dict.pop(agent.unique_id, None)
+        temp_dict.pop(id_trader, None)
+        witness_id = max(temp_dict, key=temp_dict.get)          #TODO this is not random i believe (in case of tie)
+        witness = agent.model.get_agent_by_id(witness_id)
+        print(witness.unique_id, agent.unique_id, id_trader)
+
     else:
         raise NotImplementedError
-    agent_list.remove(witness) # Removes it from the original list, so no need to return the list
+    agent_list.remove(witness)  # Removes it from the original list, so no need to return the list
     return witness
+
 
 def calculateOffer(agent, trust_in_target_agent):
     tactic = agent.custom_strategies['offer']
     if tactic == "standard":
-        return np.clip(((trust_in_target_agent + agent.honesty)/2) * 100, 0, 100)
+        return np.clip(((trust_in_target_agent + agent.honesty) / 2) * 100, 0, 100)
     elif tactic == "extra1":
-        return np.clip(((trust_in_target_agent + agent.honesty)/2) * 100, 0, 100)
+        return np.clip(((trust_in_target_agent + agent.honesty) / 2) * 100, 0, 100)     #TODO no difference, needs change if we want this functionality
     else:
         raise NotImplementedError
+
 
 # Ways to update trust:
 #   standard: only update your trust in the trading partner
@@ -47,24 +56,24 @@ def calculateOffer(agent, trust_in_target_agent):
 def updateTrustValues(agent, gain_or_loss, partner, witness):
     tactic = agent.custom_strategies['trust_update']
     if tactic == "standard":
-        trust_update_value = gain_or_loss/5
+        trust_update_value = gain_or_loss / 5
         current_trust = agent.trust_per_trader[partner.unique_id]
-        agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust+ trust_update_value))
+        agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust + trust_update_value))
     elif tactic == "witness_included":
-        trust_update_value = gain_or_loss/5
+        trust_update_value = gain_or_loss / 5
         current_trust = agent.trust_per_trader[partner.unique_id]
-        agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust+ trust_update_value))
+        agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust + trust_update_value))
         current_witness_trust = agent.trust_per_trader[witness.unique_id]
-        agent.trust_per_trader[witness.unique_id] = max(0, min(100, current_witness_trust+ trust_update_value))
+        agent.trust_per_trader[witness.unique_id] = max(0, min(100, current_witness_trust + trust_update_value))
     elif tactic == "critical":
         current_trust = agent.trust_per_trader[partner.unique_id]
-        trust_update_value = (gain_or_loss/5)*(0.1*current_trust)
-        agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust+ trust_update_value))
+        trust_update_value = (gain_or_loss / 5) * (0.1 * current_trust)
+        agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust + trust_update_value))
     else:
         raise NotImplementedError
     return
 
-    
+
 def calculateTrust(agent, partner, witness):
     """Method to calculate the trust value of trade partner (target agent) based on strategy"""
     trust_in_partner = agent.trust_per_trader[partner.unique_id]
@@ -74,10 +83,10 @@ def calculateTrust(agent, partner, witness):
     tactic = agent.custom_strategies['witness']
     # agent.strategies.trust_tactic # TODO: this is not implemented yet
 
-    if  tactic == 'standard':
-        trust = (trust_in_partner + witness_trust_in_partner) /2  #standaard
+    if tactic == 'standard':
+        trust = (trust_in_partner + witness_trust_in_partner) / 2  # standaard
     elif tactic == 'skeptic':
-        trust = (((trust_in_witness + witness_trust_in_partner) / 2) + trust_in_partner) /2
+        trust = (((trust_in_witness + witness_trust_in_partner) / 2) + trust_in_partner) / 2
     elif tactic == 'naive':
         trust = witness_trust_in_partner
     else:
@@ -86,21 +95,24 @@ def calculateTrust(agent, partner, witness):
 
 
 class TraderAgent(mesa.Agent):
-    def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions, strategies=None, customizedStrategies = {}):
+    def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions, strategies=None,
+                 customizedStrategies={}):
         # Pass the parameters to the parent class.
         super().__init__(unique_id, model)
         self.model = model
-        self.money = money # int start 100
-        self.honesty = honesty # float 0 - 1
-        self.trust_per_trader = trust_per_trader # array (or list?) float for each trader start 0.5
+        self.money = money  # int start 100
+        self.honesty = honesty  # float 0 - 1
+        self.trust_per_trader = trust_per_trader  # array (or list?) float for each trader start 0.5
         self.interactions = interactions
         self.move = True
         self.radius = 3
         self.trade_partner = None
 
-        self.custom_strategies = customizedStrategies # TODO: remove double var allocation once done implementing
+        self.proportional_funds = 1
+
+        self.custom_strategies = customizedStrategies  # TODO: remove double var allocation once done implementing
         self.cs = cusStrat.CustomStrategies()
-            
+
     def setTradePartner(self, partnerObj):
         self.trade_partner = partnerObj
         return
@@ -128,31 +140,30 @@ class TraderAgent(mesa.Agent):
         if not is_occupied:
             self.model.grid.move_agent(self, (new_x, new_y))
 
-    
     def step(self):
         if self.trade_partner is None:
             return
-        
-        available_agents = self.model.schedule.agents.copy()            #check dit als iets heel raar is
-        
+
+        available_agents = self.model.schedule.agents.copy()  # check dit als iets heel raar is
+
         available_agents.remove(self)
         available_agents.remove(self.trade_partner)
 
-        #If neighbourhood is True, the agent has a specific radius in which it can choose its witnesses
+        # If neighbourhood is True, the agent has a specific radius in which it can choose its witnesses
         if self.model.neighbourhood:
             agents_within_a = get_agents_within_radius(agent=self, agent_list=available_agents)
             agents_within_b = get_agents_within_radius(agent=self.trade_partner, agent_list=available_agents)
-            witness_agent_a = findWitness(agent=self, agent_list=agents_within_a)
-            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=agents_within_b)
+            witness_agent_a = findWitness(agent=self, agent_list=agents_within_a, id_trader=self.trade_partner.unique_id)
+            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=agents_within_b, id_trader=self.unique_id)
 
         else:
             # witness_agent_a = self.cs.mechanics['witness'].findWitness(agent=self, agent_list=available_agents) # TODO: fix or switch to implementing all strategies in this file
-            witness_agent_a = findWitness(agent=self, agent_list=available_agents)
-            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=available_agents)
+            witness_agent_a = findWitness(agent=self, agent_list=available_agents, id_trader=self.trade_partner.unique_id)
+            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=available_agents, id_trader=self.unique_id)
 
-        #TRADE PART
-        #Trust_in_agent_b = trust_in_witness_a * trust_of_witness_a
-        
+        # TRADE PART
+        # Trust_in_agent_b = trust_in_witness_a * trust_of_witness_a
+
         # Your trust in trade partner + your witness' trust in trade partner
         # trust_in_agent_b = self.cs.mechanics['trust_update'].calculateTrust(agent=self.trade_partner, parner=self, witness=witness_agent_a) # TODO: fix or switch to implementing all strategies in this file
         trust_in_agent_b = calculateTrust(self, self.trade_partner, witness_agent_a)
@@ -175,8 +186,8 @@ class TraderAgent(mesa.Agent):
         # Alternative function by Thijs
 
         # self.cs['trust_update'].updateTrustValues(self, my_money_change, self.trade_partner, witness_agent_a) # TODO: fix or switch to implementing all strategies in this file
-        updateTrustValues(self, my_money_change, self.trade_partner, witness_agent_a)       #update agent A
-        updateTrustValues(self.trade_partner, partner_money_change, self, witness_agent_b)  #update agent B
+        updateTrustValues(self, my_money_change, self.trade_partner, witness_agent_a)  # update agent A
+        updateTrustValues(self.trade_partner, partner_money_change, self, witness_agent_b)  # update agent B
 
         # # Calculate the new trusts
         # self.trust_per_trader[self.trade_partner.unique_id] = np.clip(self.trust_per_trader[self.trade_partner.unique_id] * (self.interactions[self.trade_partner.unique_id] / (self.interactions[self.trade_partner.unique_id] + 1))
@@ -188,6 +199,6 @@ class TraderAgent(mesa.Agent):
         # print("New trust of agent ", int(self.unique_id), " in agent ", int(agent_b.unique_id), ":\t", self.trust_per_trader[agent_b.unique_id])
         # print("New trust of agent ", int(agent_b.unique_id), " in agent ", int(self.unique_id), ":\t", agent_b.trust_per_trader[self.unique_id], "\n")
 
-        #Moving an agent makes only makes sense if the agent has a neighbourhood.
+        # Moving an agent makes only makes sense if the agent has a neighbourhood.
         if self.model.neighbourhood:
             movement_techniques(self, self.model, self.radius)

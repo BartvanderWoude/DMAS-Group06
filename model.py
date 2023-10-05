@@ -1,5 +1,8 @@
 from typing import Dict
 
+import pandas
+from functools import partial
+
 from mesa import Model
 from trader import TraderAgent
 from mesa.time import RandomActivation
@@ -15,36 +18,59 @@ import math
 
 class AgentModel(Model):
     """A model with some number of agents."""
+    def __init__(self, N=50,
+                 Default=True,
+                 LowTrust=True,
+                 NoTrust=True,
+                 width=10, height=10,
+                 strategies: Dict[str, int] = None,
+                 strategyDistribution={},
+                 customStrategies=None,
+                 n_steps=1):
 
-    def __init__(self, N=50, Default = True, LowTrust = True, NoTrust = True,  width=10, height=10, strategies: Dict[str, int] = None, strategyDistribution = {}, CustomStrategies = None):
         super(AgentModel, self).__init__()
         self.num_agents = N
-        self.agent_distribution = strategies  #create distribution of agents with certain strategies
+        self.agent_distribution = strategies  # create distribution of agents with certain strategies
 
-        self.grid = SingleGrid(width, height,
-                               True)  # changed this from multigrid to singlegrid, as 2 agents could spawn at similar locations
+        self.grid = SingleGrid(width, height, True)  # changed this from multigrid to singlegrid, as 2 agents could spawn at similar locations
         self.schedule = RandomActivation(self)
+        self.n_steps = n_steps
         self.agent_list = []
 
         if not strategyDistribution:
             self.manually_set_distribution()
         else:
             self.strategy_distribution = strategyDistribution
-            self.custom_strategies = CustomStrategies
-        
-        #Adjust this parameter when you want to have limited vision for each agent
+            self.custom_strategies = customStrategies
+
+        # Adjust this parameter when you want to have limited vision for each agent
         self.neighbourhood = False
 
         """for visualization"""
-        self.strat_names = ["default", "lowtrust", "notrust", "funds_in_world"]  # hardcoded @TODO should be changed
+        self.iteration = 0
+        self.agent_id_dict = defaultdict(TraderAgent)
         self.agent_dict = defaultdict(list)  # for "sorting" agents by strategy.name
-        self.datacollector = self.data_collector()
+        
+        """dataset"""
+        self.df: pandas.DataFrame = None
+        self.agent_df: pandas.DataFrame = None
 
-        # Create agents according to self.strategy_distribution
+        """call methods"""
         self.setup_agents()
+        self.agentcollector = self.agent_data_collector()
+        self.datacollector = self.data_collector()  # make sure to call after setup_agents()
+
+    def get_agent_by_id(self, unique_id):
+        """helper method to get agent instance by id"""
+        try:
+            return self.agent_id_dict[unique_id]
+        except Exception as e:
+            raise KeyError
+
 
     def manually_set_distribution(self):
-        cs = CS.CustomStrategies() # comment this in order to use the older (preset) strategies system
+        """Create agents according to self.strategy_distribution"""
+        cs = CS.CustomStrategies()  # comment this in order to use the older (preset) strategies system
         # cs = {} # comment this to use the newer (customizable) strategies system
 
         # Number of agents divided by number of classes - to create even distributions per stratety         
@@ -57,9 +83,11 @@ class AgentModel(Model):
             # Strategies can be "standard", "lowball", "dont_trust_witness"
             strats_of_this_mechanic = cs.mechanics[mechanic].strategies
             # Calculate the number of agents that will get each strategy (THIS DETERMINES THE EVEN DISTRIBUTION)
-            n_agents_per_mechanic_strategy = self.num_agents / len(strats_of_this_mechanic) # 
+            n_agents_per_mechanic_strategy = self.num_agents / len(strats_of_this_mechanic)  #
             # This creates the distribution: 50 agents, 3 strategies --> [17, 16, 16]
-            strat_distribution = [math.ceil(n_agents_per_mechanic_strategy) if strat == 0 else math.floor(n_agents_per_mechanic_strategy) for strat in range(len(strats_of_this_mechanic))]
+            strat_distribution = [
+                math.ceil(n_agents_per_mechanic_strategy) if strat == 0 else math.floor(n_agents_per_mechanic_strategy)
+                for strat in range(len(strats_of_this_mechanic))]
             strat_distributions.append(strat_distribution)
 
         ####### TODO-END
@@ -70,29 +98,30 @@ class AgentModel(Model):
             distributions_per_mechanic[mechanic] = strat_distributions[i]
 
         # Thijs' implementation of strategies
-        self.strategy_distribution = distributions_per_mechanic   # DICT with << strategy topic""": distribution per strategy of that topic [] >>
-                                                            # Like {"witness: [23 27 0]"}
+        self.strategy_distribution = distributions_per_mechanic  # DICT with << strategy topic""": distribution per strategy of that topic [] >>
+        # Like {"witness: [23 27 0]"}
 
-        self.custom_strategies = cs # OBJ     # Contains all strategies and their methods
+        self.custom_strategies = cs  # OBJ     # Contains all strategies and their (unused) methods
 
     def setup_agents(self):
         print("SETUP AGENTS")
         """method to setup agents based on pre-made distribution: see experimental_setup.py"""
         # Init each agent with randomized strategies according to a specific distribution (3 strats * 3 opties per strat = 9 diff agents)
-        if self.strategy_distribution and self.custom_strategies: # Yes this was also checked before calling setup_agents, but this is a double check (maybe this function is called elsewhere too)
+        if self.strategy_distribution and self.custom_strategies:  # Yes this was also checked before calling setup_agents, but this is a double check (maybe this function is called elsewhere too)
             for agent_n in range(self.num_agents):
                 strat = self.pickAgentStrats()
-                
+                strat_name = '_'.join(strat.values())  # TODO maybe create more visible name for this?
                 a = TraderAgent(unique_id=agent_n,
                                 model=self,
                                 money=100,
                                 honesty=np.random.uniform(0, 1),
                                 trust_per_trader={i: 0.5 for i in range(self.num_agents)},
                                 interactions={i: 0 for i in range(self.num_agents)},
-                                strategies=DefaultStrat(),
+                                strategies=DefaultStrat(),  # may remove later
                                 customizedStrategies=strat)
 
-                # self.agent_dict[strat.name].append(a)  # sort agent by strategy for plotting later
+                self.agent_id_dict[agent_n] = a
+                self.agent_dict[strat_name].append(a)  # sort agent by strategy for plotting later
                 self.schedule.add(a)
                 self.agent_list.append(a)
                 self.grid.move_to_empty(a)
@@ -124,29 +153,60 @@ class AgentModel(Model):
             a2.setTradePartner(None)
         return
 
-
-    # TODO: this plots the categories of agents - todo is to plot each combination of properties (each variety of agent)
     def data_collector(self):
-        """method to pass data (per step) to mesa interface, currently showing the sum, and summed money based on strategy"""
-        return DataCollector(
-            {"total_money": lambda m: sum([agent.money for agent in self.agent_list]),
-             "default": lambda m: sum([agent.money for agent in self.agent_dict["default"]]),
-             "lowtrust": lambda m: sum([agent.money for agent in self.agent_dict["lowtrust"]]),
-             "notrust": lambda m: sum([agent.money for agent in self.agent_dict["notrust"]])}
-        )
+        """Method to collect data (per step) to mesa interface, currently showing the sum, and summed money based on strategy"""
+
+        def strat_avg_money(key):
+            return round(sum(agent.money for agent in self.agent_dict[key]) / len(self.agent_dict[key]), 2)
+
+        strategy_dict = {
+            "total_money": lambda m: round(sum(agent.money for agent in self.agent_list), 2),
+            "avg_money": lambda m: round(sum(agent.money for agent in self.agent_list) / len(self.agent_list), 2)
+        }
+
+        for strat_key in self.agent_dict.keys(): #equal to strat names
+            strategy_dict[strat_key] = partial(strat_avg_money,
+                                               strat_key)  # partial is used to not mess up lambda expressions
+
+        return DataCollector(strategy_dict)
+
+    def agent_data_collector(self):
+        """method to collect data from individual agents"""
+        agent_dict = {}
+
+        def honesty_money(agent):
+            return [agent.proportional_funds, agent.honesty]
+
+        for agent in self.agent_list:
+            agent_dict[agent.unique_id] = partial(honesty_money, agent)
+
+        return DataCollector(agent_dict)
 
     def collect_data(self):
-        """method to collect data to visualize later"""
-        data_dictionary = defaultdict(int, {"funds_in_world": 0})
-        for key in self.agent_dict.keys():
-            for agent in self.agent_dict[key]:
-                data_dictionary["funds_in_world"] += agent.money
-                data_dictionary[key] += agent.money
+        """method to collect data into pandas dataframe"""
+        self.df = self.datacollector.get_model_vars_dataframe()  # for agent in self.agent_list:
+        self.agent_df = self.agentcollector.get_model_vars_dataframe()
 
-        self.datacollector.add_table_row(table_name="growth_over_time", row=data_dictionary, ignore_missing=True)
+        funds_in_world = self.df['total_money'].iloc[self.df['total_money'].idxmax()]
+        average_funds = funds_in_world / self.num_agents
+
+        for agent in self.agent_list:
+            agent.proportional_funds = agent.money / average_funds
+
+        if self.iteration % 20 == 0:
+            print("saved df")
+            self.df.to_csv("money_over_time.csv")
+            self.agent_df.to_csv("agent.csv")
 
     # Iteration
     def step(self):
-        self.assignTradePartners()  # Set up duo's
-        self.schedule.step()  # perform agent actions
-        self.datacollector.collect(self)
+        for _ in range(
+                self.n_steps):  # to speed up datacollection (this should be possible with the FPS slider but doesnt work)
+            self.assignTradePartners()  # Set up duo's
+            self.schedule.step()  # perform agent actions
+
+            self.datacollector.collect(self)
+            self.agentcollector.collect(self)
+            self.collect_data()
+
+            self.iteration += 1

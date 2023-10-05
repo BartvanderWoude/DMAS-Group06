@@ -1,13 +1,16 @@
+from mesa import DataCollector
 from mesa.visualization.ModularVisualization import ModularServer
 import mesa
 import math
 from custom_strategies import CustomStrategies
-
+import numpy as np
 from model import AgentModel
 from mesa.visualization.modules import CanvasGrid, ChartModule
 
+from trader import TraderAgent
 
-def agent_portrayal(agent):
+
+def agent_portrayal(agent: TraderAgent):
     portrayal = {"Filled": "true"}
     # Can only do 2 shapes properly
     portrayal["Shape"] = agent.cs.mechanics["offer"].shapes[agent.custom_strategies["offer"]]
@@ -21,10 +24,9 @@ def agent_portrayal(agent):
     portrayal["Layer"] = 0
 
     # if portrayal["Shape"] == "arrowHead":
-    portrayal["w"] = 0.9*max(0.01, min(1, (agent.money / 1000)))
-    portrayal["h"] = 0.9*max(0.01, min(1, (agent.money / 1000)))
+    for dimension in ["w", "h", "r"]:
+        portrayal[dimension] = np.clip(agent.proportional_funds, 0.1, 0.99) * 0.3   #scale based on funds compared to others
 
-    portrayal["r"] = max(0.01, min(1, (agent.money / 1000)))
     return portrayal
 
 
@@ -37,7 +39,6 @@ if __name__ == '__main__':
         {"Label": "lowtrust", "Color": "blue"}], data_collector_name="datacollector"
     )
 
-
 # Model visuals
 model_params = {
     "N": mesa.visualization.Slider(
@@ -46,9 +47,19 @@ model_params = {
     "Default": mesa.visualization.Checkbox("Default agents", True),
     "LowTrust": mesa.visualization.Checkbox("Low trust agents", True),
     "NoTrust": mesa.visualization.Checkbox("Untrustful agents", True),
-    "width":10,
-    "height":10
+    "width": 10,
+    "height": 10,
+    "n_steps": mesa.visualization.Slider(
+        "trading rounds per step:", 1, 1, 30, description="trading rounds per step")
 }
+
+server = ModularServer(AgentModel,
+                       [grid, chart],
+                       "Traders Model",
+                       model_params)
+# {"N": 50, "width": 10, "height": 10}
+server.port = 8521  # The default
+server.launch()
 
 # Attempt at implementing the distribution calculation here (because you have the model params available here)
 
@@ -70,7 +81,7 @@ model_params = {
 #         # This creates the distribution: 50 agents, 3 strategies --> [17, 16, 16]
 #         strat_distribution = [math.ceil(n_agents_per_mechanic_strategy) if strat == 0 else math.floor(n_agents_per_mechanic_strategy) for strat in range(len(strats_of_this_mechanic))]
 #         strat_distributions.append(strat_distribution)
-        
+
 
 #         ##  Earlier version, calculate how many agents should get a certain strategy
 #     # w = model_params["N"].value / len(cs.witness_strategies)
@@ -92,11 +103,3 @@ model_params = {
 
 #     agent_model =  AgentModel()
 #     # agent_model.set_distribution(strategy_distribution=distributions_per_mechanic, custom_strategies=cs)
-
-server = ModularServer(AgentModel,
-                       [grid, chart],
-                       "Traders Model",
-                       model_params)
-# {"N": 50, "width": 10, "height": 10}
-server.port = 8521  # The default
-server.launch()
