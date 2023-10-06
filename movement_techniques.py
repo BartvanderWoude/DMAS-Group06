@@ -1,8 +1,10 @@
 import random
 import math
 
-def movement_techniques(agent, model, radius):
-    choice = random.choice(["random_spot", "random_walk", "move_within_radius"]) # More techniques to come, implementation as random choice should be adjusted
+def movement_techniques(agent, model, radius, choice = None):
+    if choice is None:
+        choice = random.choice(["random_spot", "random_walk", "move_within_radius"]) # More techniques to come, implementation as random choice should be adjusted
+        
     if choice == "random_spot":
         move_to_random_spot(agent, model)
         return
@@ -27,7 +29,7 @@ def move_to_random_spot(agent, model):
 
         if not is_occupied:
             model.grid.move_agent(agent, (new_x, new_y))
-            break
+            return
 
 def random_walk(agent, model):
     dx, dy = random.choice([(1, 0), (-1, 0), (0, 1), (0, -1)])

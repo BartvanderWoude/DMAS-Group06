@@ -44,9 +44,12 @@ model_params = {
     "N": mesa.visualization.Slider(
         "Number of agents:", 50, 1, 100, description="Initial Number of People"
     ),
-    "Default": mesa.visualization.Checkbox("Default agents", True),
-    "LowTrust": mesa.visualization.Checkbox("Low trust agents", True),
-    "NoTrust": mesa.visualization.Checkbox("Untrustful agents", True),
+    "neighbourhood": mesa.visualization.Checkbox("Neighbourhood", value=False),
+    "movement_type": mesa.visualization.Choice(
+        "Movement type",
+        value="random_spot",
+        choices=list(["random_spot", "random_walk", "move_within_radius"]),
+    ),
     "width": 10,
     "height": 10,
     "n_steps": mesa.visualization.Slider(
@@ -57,7 +60,7 @@ server = ModularServer(AgentModel,
                        [grid, chart],
                        "Traders Model",
                        model_params)
-# {"N": 50, "width": 10, "height": 10}
+
 server.port = 8521  # The default
 server.launch()
 
