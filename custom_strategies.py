@@ -31,8 +31,6 @@ class WitnessStrategies():
             if self.strategies[i] != key:
                 print(self.strategies[i], key)
                 raise ValueError
-        # if len(self.strategies) != len(self.colors):
-        # raise valueError
 
     def calculateTrust(self, agent, partner, witness):
         """Method to calculate the trust value of trade partner (target agent) based on strategy"""
@@ -41,8 +39,6 @@ class WitnessStrategies():
         witness_trust_in_partner = witness.trust_per_trader[partner.unique_id]
 
         tactic = agent.custom_strategies['witness']
-
-        # agent.strategies.trust_tactic # TODO: this is not implemented yet
 
         if tactic == 'standard':
             trust = (trust_in_partner + witness_trust_in_partner) / 2  # standaard
@@ -65,7 +61,6 @@ class RecruitWitnessStrategies():
             if self.strategies[i] != key:
                 raise ValueError
             
-    # Preferable method - no implemented mechanic yet (if you implement this, remove "or True" below)
     def findWitness(self, agent, agent_list, id_trader):
         tactic = agent.custom_strategies['getwitness']
         if tactic == "standard":
@@ -84,15 +79,12 @@ class RecruitWitnessStrategies():
 
 class OfferStrategies():
     def __init__(self):
-        self.strategies = ["standard", "extra1"]
-        self.shapes = {"standard": "circle",
-                       "extra1": "rect"}
+        self.strategies = ["standard"]
+        self.shapes = {"standard": "circle"}
 
         for i, key in enumerate(self.shapes):
             if self.strategies[i] != key:
                 raise ValueError
-        # if len(self.strategies) != len(self.shapes):
-        #   raise valueError
 
     def calculateOffer(self, agent, trust_in_target_agent):
         tactic = agent.custom_strategies['offer']
@@ -100,7 +92,7 @@ class OfferStrategies():
         if tactic == "standard":
             offer = np.clip(((trust_in_target_agent + agent.honesty) / 2) * 100, 0, 100)
         elif tactic == "extra1":
-            offer = np.clip(((trust_in_target_agent + agent.honesty) / 2) * 100, 0, 100)     #TODO no difference, needs change if we want this functionality
+            offer = np.clip(((trust_in_target_agent + agent.honesty) / 2) * 100, 0, 100)
         else:
             raise NotImplementedError
         
@@ -117,12 +109,7 @@ class TrustUpdateStrategies():
         for i, key in enumerate(self.text):
             if self.strategies[i] != key:
                 raise ValueError
-        # if len(self.strategies) != len(self.text):
-        # raise ValueError
 
-    # Ways to update trust:
-    #   standard: only update your trust in the trading partner
-    #   include_witness: include the witness to some extent (same as partner or less? more?)
     def updateTrustValues(self, agent, gain_or_loss, partner, witness):
         tactic = agent.custom_strategies['trust_update']
         if tactic == "standard":

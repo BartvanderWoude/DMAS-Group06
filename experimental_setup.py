@@ -10,6 +10,8 @@ from tqdm.auto import tqdm
 from model import AgentModel
 
 
+#@TODO for now not used, might use this later again, fetch results running server.py
+
 
 def get_strategies(total_agents=50, env_count=3) -> List[Dict[str, int]]:
     """code starts to test here! this is similar to a strategy dictionary"""
