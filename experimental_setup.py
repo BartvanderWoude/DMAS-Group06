@@ -10,6 +10,7 @@ from tqdm.auto import tqdm
 from model import AgentModel
 
 
+
 def get_strategies(total_agents=50, env_count=3) -> List[Dict[str, int]]:
     """code starts to test here! this is similar to a strategy dictionary"""
     strats = []
@@ -20,6 +21,7 @@ def get_strategies(total_agents=50, env_count=3) -> List[Dict[str, int]]:
     strats.append({"default": 10, "lowtrust": 20, "notrust": 20})
     strats.append({"default": 10, "lowtrust": 20, "notrust": 20})
     """"setup strategies above"""
+    
 
     for idx, strat in enumerate(strats):
         if sum(strat.values()) != total_agents:
