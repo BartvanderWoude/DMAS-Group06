@@ -1,27 +1,26 @@
 from typing import Dict
-
 import pandas
 from functools import partial
-
 from mesa import Model
-from trader import TraderAgent
 from mesa.time import RandomActivation
-from mesa.space import MultiGrid, SingleGrid
+from mesa.space import SingleGrid
 import numpy as np
-from strategies import DefaultStrat, NoTrustStrat, LowTrustStrat
 from mesa.datacollection import DataCollector
 from collections import defaultdict
 from scipy.special import softmax
-import custom_strategies as CS
 import math
+
+# from strategies import DefaultStrat, NoTrustStrat, LowTrustStrat
+from trader import TraderAgent
+import custom_strategies as CS
+
 
 
 class AgentModel(Model):
     """A model with some number of agents."""
     def __init__(self, N=50,
-                 Default=True,
-                 LowTrust=True,
-                 NoTrust=True,
+                 neighbourhood=False,
+                 movement_type="random_spot",
                  width=10, height=10,
                  strategies: Dict[str, int] = None,
                  strategyDistribution={},
@@ -30,6 +29,7 @@ class AgentModel(Model):
 
         super(AgentModel, self).__init__()
         self.num_agents = N
+        self.initial_money = 100
         self.agent_distribution = strategies  # create distribution of agents with certain strategies
 
         self.grid = SingleGrid(width, height, True)  # changed this from multigrid to singlegrid, as 2 agents could spawn at similar locations
@@ -44,7 +44,8 @@ class AgentModel(Model):
             self.custom_strategies = customStrategies
 
         # Adjust this parameter when you want to have limited vision for each agent
-        self.neighbourhood = False
+        self.neighbourhood = neighbourhood
+        self.movement_type = movement_type
 
         """for visualization"""
         self.iteration = 0
@@ -113,11 +114,11 @@ class AgentModel(Model):
                 strat_name = '_'.join(strat.values())  # TODO maybe create more visible name for this?
                 a = TraderAgent(unique_id=agent_n,
                                 model=self,
-                                money=100,
+                                money=self.initial_money,
                                 honesty=np.random.uniform(0, 1),
                                 trust_per_trader={i: 0.5 for i in range(self.num_agents)},
                                 interactions={i: 0 for i in range(self.num_agents)},
-                                strategies=DefaultStrat(),  # may remove later
+                                #strategies=DefaultStrat(),  # may remove later
                                 customizedStrategies=strat)
 
                 self.agent_id_dict[agent_n] = a
@@ -130,7 +131,7 @@ class AgentModel(Model):
     # Works, output is a DICT of mechanics and their strategies --> {'witness': 'standard', ...}
     def pickAgentStrats(self):
         stats = {}
-        for i, mechanic in enumerate(self.custom_strategies.mechanics):
+        for mechanic in self.custom_strategies.mechanics:
             distribution = np.asarray(self.strategy_distribution[mechanic])
             probability = softmax(distribution)
 
