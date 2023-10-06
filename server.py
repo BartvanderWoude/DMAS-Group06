@@ -13,8 +13,8 @@ from trader import TraderAgent
 def agent_portrayal(agent: TraderAgent):
     portrayal = {"Filled": "true"}
     # Can only do 2 shapes properly
-    portrayal["Shape"] = agent.cs.mechanics["offer"].shapes[agent.custom_strategies["offer"]]
-    # portrayal["Shape"] = "circle"
+    # portrayal["Shape"] = agent.cs.mechanics["offer"].shapes[agent.custom_strategies["offer"]]
+    portrayal["Shape"] = "circle"
     # Can do infinetely many colors
     portrayal["Color"] = agent.cs.mechanics["witness"].colors[agent.custom_strategies["witness"]]
     # Can do infinitely many texts, though it doesnt show properly (on the plotted shape)

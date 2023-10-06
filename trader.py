@@ -23,14 +23,15 @@ def get_agents_within_radius(agent, agent_list):
 
 # This has no mechanic yet
 def findWitness(agent, agent_list, id_trader):
-    tactic = agent.custom_strategies['getwitness']
+    # tactic = agent.custom_strategies['getwitness']
+    tactic = "standard"
     if tactic == "standard":
         witness = np.random.choice(agent_list)
-    elif tactic == "highvalue": #TODO make this working, gets error when removing from the agent_list below
+    elif tactic == "highvalue":  # TODO make this working, gets error when removing from the agent_list below
         temp_dict = {index: value for index, value in enumerate(agent.trust_per_trader)}
         temp_dict.pop(agent.unique_id, None)
         temp_dict.pop(id_trader, None)
-        witness_id = max(temp_dict, key=temp_dict.get)          #TODO this is not random i believe (in case of tie)
+        witness_id = max(temp_dict, key=temp_dict.get)  # TODO this is not random i believe (in case of tie)
         witness = agent.model.get_agent_by_id(witness_id)
         print(witness.unique_id, agent.unique_id, id_trader)
 
@@ -41,11 +42,13 @@ def findWitness(agent, agent_list, id_trader):
 
 
 def calculateOffer(agent, trust_in_target_agent):
-    tactic = agent.custom_strategies['offer']
+    # tactic = agent.custom_strategies['offer']
+    tactic = "standard"
     if tactic == "standard":
         return np.clip(((trust_in_target_agent + agent.honesty) / 2) * 100, 0, 100)
     elif tactic == "extra1":
-        return np.clip(((trust_in_target_agent + agent.honesty) / 2) * 100, 0, 100)     #TODO no difference, needs change if we want this functionality
+        return np.clip(((trust_in_target_agent + agent.honesty) / 2) * 100, 0,
+                       100)  # TODO no difference, needs change if we want this functionality
     else:
         raise NotImplementedError
 
@@ -95,8 +98,8 @@ def calculateTrust(agent, partner, witness):
 
 
 class TraderAgent(mesa.Agent):
-    def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions, strategies=None,
-                 customizedStrategies={}):
+    def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions, customizedStrategies,
+                 strat_name, strategies=None):
         # Pass the parameters to the parent class.
         super().__init__(unique_id, model)
         self.model = model
@@ -112,6 +115,7 @@ class TraderAgent(mesa.Agent):
 
         self.custom_strategies = customizedStrategies  # TODO: remove double var allocation once done implementing
         self.cs = cusStrat.CustomStrategies()
+        self.strat_name = strat_name
 
     def setTradePartner(self, partnerObj):
         self.trade_partner = partnerObj
@@ -153,13 +157,17 @@ class TraderAgent(mesa.Agent):
         if self.model.neighbourhood:
             agents_within_a = get_agents_within_radius(agent=self, agent_list=available_agents)
             agents_within_b = get_agents_within_radius(agent=self.trade_partner, agent_list=available_agents)
-            witness_agent_a = findWitness(agent=self, agent_list=agents_within_a, id_trader=self.trade_partner.unique_id)
-            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=agents_within_b, id_trader=self.unique_id)
+            witness_agent_a = findWitness(agent=self, agent_list=agents_within_a,
+                                          id_trader=self.trade_partner.unique_id)
+            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=agents_within_b,
+                                          id_trader=self.unique_id)
 
         else:
             # witness_agent_a = self.cs.mechanics['witness'].findWitness(agent=self, agent_list=available_agents) # TODO: fix or switch to implementing all strategies in this file
-            witness_agent_a = findWitness(agent=self, agent_list=available_agents, id_trader=self.trade_partner.unique_id)
-            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=available_agents, id_trader=self.unique_id)
+            witness_agent_a = findWitness(agent=self, agent_list=available_agents,
+                                          id_trader=self.trade_partner.unique_id)
+            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=available_agents,
+                                          id_trader=self.unique_id)
 
         # TRADE PART
         # Trust_in_agent_b = trust_in_witness_a * trust_of_witness_a

@@ -10,9 +10,9 @@ class CustomStrategies():
     def __init__(self):
         self.mechanics = {
             "witness": WitnessStrategies(),
-            "offer": OfferStrategies(),
+            # "offer": OfferStrategies(),
             "trust_update": TrustUpdateStrategies(),
-            "getwitness": RecruitWitnessStrategies(),
+            # "getwitness": RecruitWitnessStrategies(),
 
         }
 

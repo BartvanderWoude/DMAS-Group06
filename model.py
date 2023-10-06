@@ -18,6 +18,7 @@ import math
 
 class AgentModel(Model):
     """A model with some number of agents."""
+
     def __init__(self, N=50,
                  Default=True,
                  LowTrust=True,
@@ -32,7 +33,8 @@ class AgentModel(Model):
         self.num_agents = N
         self.agent_distribution = strategies  # create distribution of agents with certain strategies
 
-        self.grid = SingleGrid(width, height, True)  # changed this from multigrid to singlegrid, as 2 agents could spawn at similar locations
+        self.grid = SingleGrid(width, height,
+                               True)  # changed this from multigrid to singlegrid, as 2 agents could spawn at similar locations
         self.schedule = RandomActivation(self)
         self.n_steps = n_steps
         self.agent_list = []
@@ -50,7 +52,7 @@ class AgentModel(Model):
         self.iteration = 0
         self.agent_id_dict = defaultdict(TraderAgent)
         self.agent_dict = defaultdict(list)  # for "sorting" agents by strategy.name
-        
+
         """dataset"""
         self.df: pandas.DataFrame = None
         self.agent_df: pandas.DataFrame = None
@@ -66,7 +68,6 @@ class AgentModel(Model):
             return self.agent_id_dict[unique_id]
         except Exception as e:
             raise KeyError
-
 
     def manually_set_distribution(self):
         """Create agents according to self.strategy_distribution"""
@@ -114,11 +115,13 @@ class AgentModel(Model):
                 a = TraderAgent(unique_id=agent_n,
                                 model=self,
                                 money=100,
-                                honesty=np.random.uniform(0, 1),
+                                # honesty=np.random.uniform(0, 1),
+                                honesty = np.clip(np.random.normal(0.5, 0.2), 0.1, 0.9),
                                 trust_per_trader={i: 0.5 for i in range(self.num_agents)},
                                 interactions={i: 0 for i in range(self.num_agents)},
                                 strategies=DefaultStrat(),  # may remove later
-                                customizedStrategies=strat)
+                                customizedStrategies=strat,
+                                strat_name=strat_name)
 
                 self.agent_id_dict[agent_n] = a
                 self.agent_dict[strat_name].append(a)  # sort agent by strategy for plotting later
@@ -164,7 +167,7 @@ class AgentModel(Model):
             "avg_money": lambda m: round(sum(agent.money for agent in self.agent_list) / len(self.agent_list), 2)
         }
 
-        for strat_key in self.agent_dict.keys(): #equal to strat names
+        for strat_key in self.agent_dict.keys():  # equal to strat names
             strategy_dict[strat_key] = partial(strat_avg_money,
                                                strat_key)  # partial is used to not mess up lambda expressions
 
@@ -178,7 +181,7 @@ class AgentModel(Model):
             return [agent.proportional_funds, agent.honesty]
 
         for agent in self.agent_list:
-            agent_dict[agent.unique_id] = partial(honesty_money, agent)
+            agent_dict[f"{agent.unique_id}_{agent.strat_name}"] = partial(honesty_money, agent)
 
         return DataCollector(agent_dict)
 
