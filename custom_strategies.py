@@ -51,31 +51,33 @@ class WitnessStrategies():
 
         return trust
 
+
 class RecruitWitnessStrategies():
     def __init__(self):
-        self.strategies = ["standard"] #, "highvalue"] #TODO uncomment when wanting to implement this feature
+        self.strategies = ["standard"]  # , "highvalue"] #TODO uncomment when wanting to implement this feature
         self.shapes = {"standard": "circle"}
-                       # "highvalue": "rect"}
+        # "highvalue": "rect"}
 
         for i, key in enumerate(self.shapes):
             if self.strategies[i] != key:
                 raise ValueError
-            
+
     def findWitness(self, agent, agent_list, id_trader):
         tactic = agent.custom_strategies['getwitness']
         if tactic == "standard":
             witness = np.random.choice(agent_list)
-        elif tactic == "highvalue": #TODO make this working, gets error when removing from the agent_list below
+        elif tactic == "highvalue":  # TODO make this working, gets error when removing from the agent_list below
             temp_dict = {index: value for index, value in enumerate(agent.trust_per_trader)}
             temp_dict.pop(agent.unique_id, None)
             temp_dict.pop(id_trader, None)
-            witness_id = max(temp_dict, key=temp_dict.get)          #TODO this is not random i believe (in case of tie)
+            witness_id = max(temp_dict, key=temp_dict.get)  # TODO this is not random i believe (in case of tie)
             witness = agent.model.get_agent_by_id(witness_id)
             print(witness.unique_id, agent.unique_id, id_trader)
         else:
             raise NotImplementedError
         agent_list.remove(witness)
         return witness
+
 
 class OfferStrategies():
     def __init__(self):
@@ -88,14 +90,14 @@ class OfferStrategies():
 
     def calculateOffer(self, agent, trust_in_target_agent):
         tactic = agent.custom_strategies['offer']
-        
+
         if tactic == "standard":
-            offer = np.clip(((trust_in_target_agent + agent.honesty) / 2) * 100, 0, 100)
+            offer = np.clip((trust_in_target_agent * agent.honesty) * 100, 0, 100)
         elif tactic == "extra1":
-            offer = np.clip(((trust_in_target_agent + agent.honesty) / 2) * 100, 0, 100)
+            offer = np.clip((trust_in_target_agent * agent.honesty) * 100, 0, 100)
         else:
             raise NotImplementedError
-        
+
         return offer
 
 
@@ -112,20 +114,21 @@ class TrustUpdateStrategies():
 
     def updateTrustValues(self, agent, gain_or_loss, partner, witness):
         tactic = agent.custom_strategies['trust_update']
+        gain_or_loss /= 100  # refactor test
         if tactic == "standard":
             trust_update_value = gain_or_loss / 5
             current_trust = agent.trust_per_trader[partner.unique_id]
-            agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust + trust_update_value))
+            agent.trust_per_trader[partner.unique_id] = np.clip(current_trust + trust_update_value, 0, 1)
         elif tactic == "witness_included":
             trust_update_value = gain_or_loss / 5
             current_trust = agent.trust_per_trader[partner.unique_id]
-            agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust + trust_update_value))
+            agent.trust_per_trader[partner.unique_id] = np.clip(current_trust + trust_update_value, 0, 1)
             current_witness_trust = agent.trust_per_trader[witness.unique_id]
-            agent.trust_per_trader[witness.unique_id] = max(0, min(100, current_witness_trust + trust_update_value))
+            agent.trust_per_trader[witness.unique_id] = np.clip(current_witness_trust + trust_update_value, 0, 1)
         elif tactic == "critical":
             current_trust = agent.trust_per_trader[partner.unique_id]
-            trust_update_value = (gain_or_loss / 5) * (0.1 * current_trust)
-            agent.trust_per_trader[partner.unique_id] = max(0, min(100, current_trust + trust_update_value))
+            trust_update_value = (gain_or_loss / 5) * current_trust
+            agent.trust_per_trader[partner.unique_id] = np.clip(current_trust + trust_update_value, 0, 1)
         else:
             raise NotImplementedError
         return
