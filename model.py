@@ -48,6 +48,7 @@ class AgentModel(Model):
         # Adjust this parameter when you want to have limited vision for each agent
         self.neighbourhood = neighbourhood
         self.movement_type = movement_type
+        self.agents_finished_trading = []
 
         """for visualization"""
         self.iteration = 0
@@ -147,7 +148,7 @@ class AgentModel(Model):
             a2 = self.agent_list[pair_idx + half]
 
             a1.setTradePartner(a2)
-            a2.setTradePartner(None)
+            a2.setTradePartner(a1)
         return
 
     def data_collector(self):
@@ -226,6 +227,7 @@ class AgentModel(Model):
     def step(self):
         """Method that will call every step click, each call is a new iterations"""
         for _ in range(self.n_steps):  # to speed up datacollection (this should be possible with the FPS slider but doesnt work)
+            self.agents_finished_trading = []
             self.assignTradePartners()  # Set up duo's
             self.schedule.step()  # perform agent actions
 

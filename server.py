@@ -1,12 +1,9 @@
-from mesa import DataCollector
-from mesa.visualization.ModularVisualization import ModularServer
 import mesa
-import math
-from custom_strategies import CustomStrategies
+from mesa.visualization.ModularVisualization import ModularServer
 import numpy as np
-from model import AgentModel
 from mesa.visualization.modules import CanvasGrid, ChartModule
 
+from model import AgentModel
 from trader import TraderAgent
 
 
@@ -29,8 +26,27 @@ def agent_portrayal(agent: TraderAgent):
 
     return portrayal
 
+def get_modelparams():
+    # Model visuals
+    return {
+        "n_steps": mesa.visualization.Slider(
+            "trading rounds per step:", 1, 1, 30, description="trading rounds per step"),
+        "N": mesa.visualization.Slider(
+            "Number of agents:", 50, 1, 100, description="Initial Number of People"
+        ),
+        "neighbourhood": mesa.visualization.Checkbox(
+            "Neighbourhood", value=False
+        ),
+        "movement_type": mesa.visualization.Choice(
+            "Movement type",
+            value="random_spot",
+            choices=list(["random_spot", "random_walk", "move_within_radius"]),
+        ),
+        "width": 10,
+        "height": 10,
+    }
 
-if __name__ == '__main__':
+def setup_run_server():
     grid = CanvasGrid(agent_portrayal, 10, 10, 500, 500)
     chart = ChartModule([
         {"Label": "total_money", "Color": "black"},
@@ -39,28 +55,13 @@ if __name__ == '__main__':
         {"Label": "lowtrust", "Color": "blue"}], data_collector_name="datacollector"
     )
 
-# Model visuals
-model_params = {
-    "N": mesa.visualization.Slider(
-        "Number of agents:", 50, 1, 100, description="Initial Number of People"
-    ),
-    "neighbourhood": mesa.visualization.Checkbox("Neighbourhood", value=False),
-    "movement_type": mesa.visualization.Choice(
-        "Movement type",
-        value="random_spot",
-        choices=list(["random_spot", "random_walk", "move_within_radius"]),
-    ),
-    "width": 10,
-    "height": 10,
-    "n_steps": mesa.visualization.Slider(
-        "trading rounds per step:", 1, 1, 30, description="trading rounds per step")
-}
-
-server = ModularServer(AgentModel,
+    server = ModularServer(AgentModel,
                        [grid],  #TODO revist chart
                        "Traders Model",
-                       model_params)
+                       get_modelparams())
 
-server.port = 8521  # The default
-server.launch()
+    server.port = 8521  # The default
+    server.launch()
 
+if __name__ == '__main__':
+    setup_run_server()
