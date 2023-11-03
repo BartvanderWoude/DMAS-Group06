@@ -31,8 +31,8 @@ def get_modelparams():
     return {
         "n_steps": mesa.visualization.Slider(
             "trading rounds per step:", 1, 1, 30, description="trading rounds per step"),
-        "N": mesa.visualization.Slider(
-            "Number of agents:", 50, 1, 100, description="Initial Number of People"
+        "A": mesa.visualization.Slider(
+            "Number of agents:", 50, 1, 100, description="Initial Number of agents"
         ),
         "neighbourhood": mesa.visualization.Checkbox(
             "Neighbourhood", value=False

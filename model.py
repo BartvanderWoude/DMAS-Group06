@@ -19,7 +19,7 @@ import custom_strategies as CS
 class AgentModel(Model):
     """Our main model for the Multi-agent systems model. Using a Mesa implementation"""
 
-    def __init__(self, N=50,
+    def __init__(self, A=50,
                  neighbourhood=False,
                  movement_type="random_spot",
                  width=10, height=10,
@@ -29,7 +29,7 @@ class AgentModel(Model):
                  n_steps=1):
 
         super(AgentModel, self).__init__()
-        self.num_agents = N
+        self.num_agents = A
         self.initial_money = 100
         self.agent_distribution = strategies  # create distribution of agents with certain strategies
 
