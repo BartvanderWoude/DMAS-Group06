@@ -1,7 +1,9 @@
 # DMAS-Group02
-The effect of cronyism on a multi-agent reputation based trading game.
+The effect of cronyism on a multi-agent reputation based trading game. Github: https://github.com/Altripayo/DMAS-Group06
+
 # Project structure
 There are a number of files. Giving a short explanation on what these files contain will make understanding the implementation easier.
+
 ## server.py
 This is a file meant to be run. When running it opens a browser tab with an interactive session through which you can run the model and change settings.
 ## model.py
