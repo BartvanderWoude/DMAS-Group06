@@ -19,7 +19,7 @@ class TraderAgent(mesa.Agent):
 
         self.proportional_funds = 1
 
-        self.custom_strategies = customizedStrategies  # TODO: remove double var allocation once done implementing
+        self.custom_strategies = customizedStrategies
         self.cs = cusStrat.CustomStrategies()
         self.strat_name = strat_name
 
@@ -31,7 +31,7 @@ class TraderAgent(mesa.Agent):
 
         for other_agent in agent_list:
             distance = math.sqrt((self.pos[0] - other_agent.pos[0]) ** 2 + (self.pos[1] - other_agent.pos[1]) ** 2)
-            # print("id\t", self.unique_id, "dist\t", distance, "radius\t", self.radius)
+
             if distance <= self.radius:
                 agents_within.append(other_agent)
 
@@ -79,7 +79,6 @@ class TraderAgent(mesa.Agent):
             witness_agent_b = self.trade_partner.findWitness(agent_list=agents_within_b,
                                                              id_trader=self.unique_id)
         else:
-            # witness_agent_a = self.cs.mechanics['witness'].findWitness(agent=self, agent_list=available_agents) # TODO: fix or switch to implementing all strategies in this file
             witness_agent_a = self.findWitness(agent_list=available_agents,
                                                id_trader=self.trade_partner.unique_id)
             witness_agent_b = self.trade_partner.findWitness(agent_list=available_agents,

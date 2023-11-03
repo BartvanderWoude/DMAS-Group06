@@ -11,7 +11,6 @@ from scipy.special import softmax
 import math
 import pickle
 
-# from strategies import DefaultStrat, NoTrustStrat, LowTrustStrat
 from trader import TraderAgent
 import custom_strategies as CS
 
@@ -34,7 +33,7 @@ class AgentModel(Model):
         self.agent_distribution = strategies  # create distribution of agents with certain strategies
 
         self.grid = SingleGrid(width, height,
-                               True)  # changed this from multigrid to singlegrid, as 2 agents could spawn at similar locations
+                               True)  # SingleGrid is a grid where only one agent can be on a cell at a time
         self.schedule = RandomActivation(self)
         self.n_steps = n_steps
         self.agent_list = []
@@ -73,15 +72,11 @@ class AgentModel(Model):
 
     def manually_set_distribution(self):
         """Create agents according to self.strategy_distribution"""
-        cs = CS.CustomStrategies()  # comment this in order to use the older (preset) strategies system
-
-        # Number of agents divided by number of classes - to create even distributions per stratety         
-        ####### TODO CHANGE THIS TO IMPLEMENT CUSTOM STRATEGY-DISTRIBUTIONS
+        cs = CS.CustomStrategies()
 
         # This creates an even distribution of strategies over all the agents
         strat_distributions = []
         for i, mechanic in enumerate(cs.mechanics):
-            # Strategies can be "standard", "lowball", "dont_trust_witness"
             strats_of_this_mechanic = cs.mechanics[mechanic].strategies
             # Calculate the number of agents that will get each strategy (THIS DETERMINES THE EVEN DISTRIBUTION)
             n_agents_per_mechanic_strategy = self.num_agents / len(strats_of_this_mechanic)  #
@@ -91,9 +86,8 @@ class AgentModel(Model):
                 for strat in range(len(strats_of_this_mechanic))]
             strat_distributions.append(strat_distribution)
 
-        ####### TODO-END
-
-        # This converts the distributions into a dictionary. The dictionary contains the mechanics (trade offer, update trust, etc) and for each of those, how many agents will get whatever mechanic
+        # This converts the distributions into a dictionary. The dictionary contains the mechanics (trade offer, update trust, etc)
+        # and for each of those, how many agents will get whatever mechanic
         distributions_per_mechanic = {}
         for i, mechanic in enumerate(cs.mechanics):
             distributions_per_mechanic[mechanic] = strat_distributions[i]

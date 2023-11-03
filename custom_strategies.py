@@ -4,8 +4,6 @@ import numpy as np
 ## This file helps implement the custom strategies (3 mechanics * 3 tactics = 9 different agent types)
 
 # TO IMPLEMENT A NEW MECHANIC: create a class
-# TODO CHECK FULL DESC - THIS (vvv) DOESNT WORK ATM - FOR NOW ADD THE IMPLEMENTATION TO THE TRADER AGENT CLASS
-# TO IMPLEMENT A NEW STRATEGY: add a strat to the right class init, and implement your behavior in the correct function with "if self.strategies=='whatever': behavior X " 
 class CustomStrategies():
     def __init__(self):
         self.mechanics = {
@@ -15,11 +13,6 @@ class CustomStrategies():
             "getwitness": RecruitWitnessStrategies()
         }
 
-
-# TODO: possibly a Strategy class to inherit from
-# -=here=-
-
-# TODO: Implement strategy logic here
 class WitnessStrategies():
     def __init__(self):
         self.strategies = ["standard", "skeptic", "naive"]
@@ -54,7 +47,7 @@ class WitnessStrategies():
 
 class RecruitWitnessStrategies():
     def __init__(self):
-        self.strategies = ["standard"]  # , "highvalue"] #TODO uncomment when wanting to implement this feature
+        self.strategies = ["standard"]  # , "highvalue"]
         self.shapes = {"standard": "circle"}
         # "highvalue": "rect"}
 
@@ -66,11 +59,11 @@ class RecruitWitnessStrategies():
         tactic = agent.custom_strategies['getwitness']
         if tactic == "standard":
             witness = np.random.choice(agent_list)
-        elif tactic == "highvalue":  # TODO make this working, gets error when removing from the agent_list below
+        elif tactic == "highvalue":
             temp_dict = {index: value for index, value in enumerate(agent.trust_per_trader)}
             temp_dict.pop(agent.unique_id, None)
             temp_dict.pop(id_trader, None)
-            witness_id = max(temp_dict, key=temp_dict.get)  # TODO this is not random i believe (in case of tie)
+            witness_id = max(temp_dict, key=temp_dict.get)
             witness = agent.model.get_agent_by_id(witness_id)
             print(witness.unique_id, agent.unique_id, id_trader)
         else:

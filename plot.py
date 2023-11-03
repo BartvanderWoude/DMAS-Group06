@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 import random
 import re
+import os
 
 # colors = ["red","green","blue","purple", "orange", "magenta", "lime", "darkred", "darkblue", "yellow"]
 
@@ -96,7 +97,6 @@ def proportional_line():
 
     plt.show()
 
-
 def plot_real_fake_hoensty():
     a_file = open("data_final.pkl", "rb")
     data = pickle.load(a_file)
@@ -125,7 +125,6 @@ def plot_real_fake_hoensty():
     plt.ylabel("mean trust in agent")
     plt.savefig("images/mean_trust_vs_honesty.jpg")
 
-
 def refactor_names(string, trust_update):
 
     if not trust_update:
@@ -137,11 +136,6 @@ def refactor_names(string, trust_update):
 
 
     return string
-
-
-
-
-
 
 def plot_cronyism():
     a_file = open("data_final.pkl", "rb")
@@ -170,12 +164,14 @@ def plot_cronyism():
     plt.savefig("images/individual_trust.jpg")
     plt.show()
 
+    def main_plot():
+        if not os.path.exists("images"):
+            os.makedirs("images")
+        plot_cronyism()
+        plot_real_fake_hoensty()
+        growth_line_plot()
+        plot_scatter()
+        proportional_line()
 
-
-
-if __name__ == '__main__':
-    plot_cronyism()
-    plot_real_fake_hoensty()
-    growth_line_plot()
-    plot_scatter()
-    proportional_line()
+    if __name__ == '_main_':
+        main_plot()
