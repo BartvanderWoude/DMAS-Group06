@@ -9,6 +9,7 @@ from mesa.datacollection import DataCollector
 from collections import defaultdict
 from scipy.special import softmax
 import math
+import pickle
 
 # from strategies import DefaultStrat, NoTrustStrat, LowTrustStrat
 from trader import TraderAgent
@@ -110,7 +111,7 @@ class AgentModel(Model):
                 strat_name = '_'.join(strat.values())
                 a = TraderAgent(unique_id=agent_n,
                                 model=self,
-                                honesty=np.clip(np.random.normal(0.5, 0.2), 0.1, 0.9),
+                                honesty=np.clip(np.random.normal(0.5, 0.3), 0.05, 0.95),
                                 money=self.initial_money,
                                 trust_per_trader={i: 0.5 for i in range(self.num_agents)},
                                 interactions={i: 0 for i in range(self.num_agents)},
@@ -122,7 +123,6 @@ class AgentModel(Model):
                 self.schedule.add(a)
                 self.agent_list.append(a)
                 self.grid.move_to_empty(a)
-        return
 
     # Works, output is a DICT of mechanics and their strategies --> {'witness': 'standard', ...}
     def pickAgentStrats(self):
@@ -180,6 +180,30 @@ class AgentModel(Model):
 
         return DataCollector(agent_dict)
 
+    def agent_cronyism_data(self):
+        total_dict = {}
+        strat_dict = {}
+
+        for idx in range(self.num_agents):
+            agent = self.agent_id_dict[idx]
+            strat_dict[idx] = agent.strat_name
+            result_dic = {}
+            for key, t_agent in self.agent_id_dict.items():
+                honesty = t_agent.honesty
+                trust_in_t = agent.trust_per_trader[key]
+                result_dic[key] = [trust_in_t, honesty]
+
+            total_dict[agent.unique_id] = result_dic
+
+        a_file = open("data.pkl", "wb")
+        pickle.dump(total_dict, a_file)
+        a_file.close()
+        a_file = open("strat.pkl", "wb")
+        pickle.dump(strat_dict, a_file)
+        a_file.close()
+
+
+
     def collect_data(self):
         """method to collect data into pandas dataframe"""
         self.df = self.datacollector.get_model_vars_dataframe()  # for agent in self.agent_list:
@@ -195,6 +219,9 @@ class AgentModel(Model):
             print("saved df")
             self.df.to_csv("money_over_time.csv")
             self.agent_df.to_csv("agent.csv")
+
+        if self.iteration % 10 == 0:
+            self.agent_cronyism_data()
 
     # Iteration
     def step(self):
