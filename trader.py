@@ -1,33 +1,8 @@
 import mesa
 import numpy as np
 import math
-from movement_techniques import *
+import movement_techniques
 import custom_strategies as cusStrat
-
-
-def findWitness(agent, agent_list, id_trader):
-    return agent.cs.mechanics['getwitness'].findWitness(agent,
-                                                        agent_list,
-                                                        id_trader)
-
-
-def calculateOffer(agent, trust_in_target_agent):
-    return agent.cs.mechanics['offer'].calculateOffer(agent,
-                                                      trust_in_target_agent)
-
-
-def updateTrustValues(agent, gain_or_loss, partner, witness):
-    agent.cs.mechanics['trust_update'].updateTrustValues(agent,
-                                                         gain_or_loss,
-                                                         partner,
-                                                         witness)
-
-
-def calculateTrust(agent, partner, witness):
-    return agent.cs.mechanics['witness'].calculateTrust(agent=agent,
-                                                        partner=partner,
-                                                        witness=witness)
-
 
 class TraderAgent(mesa.Agent):
     def __init__(self, unique_id, model, money, honesty, trust_per_trader, interactions, customizedStrategies,
@@ -61,11 +36,34 @@ class TraderAgent(mesa.Agent):
                 agents_within.append(other_agent)
 
         return agents_within
+    
+    def findWitness(self, agent_list, id_trader):
+        return self.cs.mechanics['getwitness'].findWitness(self,
+                                                        agent_list,
+                                                        id_trader)
+    
+    def calculateTrust(self, witness):
+        return self.cs.mechanics['witness'].calculateTrust(agent=self,
+                                                        partner=self.trade_partner,
+                                                        witness=witness)
+    
+    def calculateOffer(self, trust_in_target_agent):
+        return self.cs.mechanics['offer'].calculateOffer(self,
+                                                      trust_in_target_agent)
+    
+    def updateTrustValues(self, gain_or_loss, witness):
+        self.cs.mechanics['trust_update'].updateTrustValues(self,
+                                                         gain_or_loss,
+                                                         self.trade_partner,
+                                                         witness)
 
     def step(self):
         """Method which gets called for each agent at each timestep/iteration"""
-        if self.trade_partner is None:
+        if self.unique_id in self.model.agents_finished_trading:
             return
+        else:
+            self.model.agents_finished_trading.append(self.unique_id)
+            self.model.agents_finished_trading.append(self.trade_partner.unique_id)
 
         available_agents = self.model.schedule.agents.copy()
 
@@ -76,24 +74,24 @@ class TraderAgent(mesa.Agent):
         if self.model.neighbourhood:
             agents_within_a = self.get_agents_within_radius(agent_list=available_agents)
             agents_within_b = self.trade_partner.get_agents_within_radius(agent_list=available_agents)
-            witness_agent_a = findWitness(agent=self, agent_list=agents_within_a,
-                                          id_trader=self.trade_partner.unique_id)
-            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=agents_within_b,
-                                          id_trader=self.unique_id)
+            witness_agent_a = self.findWitness(agent_list=agents_within_a,
+                                               id_trader=self.trade_partner.unique_id)
+            witness_agent_b = self.trade_partner.findWitness(agent_list=agents_within_b,
+                                                             id_trader=self.unique_id)
         else:
             # witness_agent_a = self.cs.mechanics['witness'].findWitness(agent=self, agent_list=available_agents) # TODO: fix or switch to implementing all strategies in this file
-            witness_agent_a = findWitness(agent=self, agent_list=available_agents,
-                                          id_trader=self.trade_partner.unique_id)
-            witness_agent_b = findWitness(agent=self.trade_partner, agent_list=available_agents,
-                                          id_trader=self.unique_id)
+            witness_agent_a = self.findWitness(agent_list=available_agents,
+                                               id_trader=self.trade_partner.unique_id)
+            witness_agent_b = self.trade_partner.findWitness(agent_list=available_agents,
+                                                             id_trader=self.unique_id)
 
         "Calculate trust in target trader"
-        trust_in_agent_b = calculateTrust(self, self.trade_partner, witness_agent_a)
-        trust_in_agent_a = calculateTrust(self.trade_partner, self, witness_agent_b)
+        trust_in_agent_b = self.calculateTrust(witness_agent_a)
+        trust_in_agent_a = self.trade_partner.calculateTrust(witness_agent_b)
 
         """Calculate trade offers"""
-        trade_offer_agent_a = calculateOffer(self, trust_in_agent_b)
-        trade_offer_agent_b = calculateOffer(self.trade_partner, trust_in_agent_a)
+        trade_offer_agent_a = self.calculateOffer(trust_in_agent_b)
+        trade_offer_agent_b = self.trade_partner.calculateOffer(trust_in_agent_a)
 
         """Update fund"""
         my_money_change = (trade_offer_agent_b * 1.10) - trade_offer_agent_a
@@ -103,9 +101,9 @@ class TraderAgent(mesa.Agent):
         self.trade_partner.money = self.trade_partner.money + partner_money_change
 
         """Update trust values"""
-        updateTrustValues(self, my_money_change, self.trade_partner, witness_agent_a)  # update agent A
-        updateTrustValues(self.trade_partner, partner_money_change, self, witness_agent_b)  # update agent B
+        self.updateTrustValues(my_money_change, witness_agent_a)  # update agent A
+        self.trade_partner.updateTrustValues(partner_money_change, witness_agent_b)  # update agent B
 
         # Moving an agent makes only makes sense if the agent has a neighbourhood.
         if self.model.neighbourhood:
-            movement_techniques(self, self.model, self.radius, self.model.movement_type)
+            movement_techniques.movement_techniques(self, self.model, self.radius, self.model.movement_type)

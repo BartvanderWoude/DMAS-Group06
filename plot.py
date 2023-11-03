@@ -3,12 +3,15 @@ import pandas as pd
 import json
 import numpy as np
 
-font = {
-    'family': 'Times',
-    'color':  'black',
-    'weight': 'normal',
-    'size': 20,
-}
+# colors = ["red","green","blue","purple", "orange", "magenta", "lime", "darkred", "darkblue", "yellow"]
+
+def get_font():
+    return {
+        'family': 'Times',
+        'color':  'black',
+        'weight': 'normal',
+        'size': 20,
+    }
 
 def growth_line_plot():
     file_path = "money_over_time.csv"
@@ -19,24 +22,21 @@ def growth_line_plot():
     for column in df.columns[2:]:
         plt.plot(df.index, df[column], label=column)
 
-    plt.xlabel('Iteration (global step)',fontdict=font)
-    plt.ylabel('Average Funds', fontdict=font)
-    plt.title('Funds gain due to Strategy/Mechanics', fontdict=font)
+    plt.xlabel('Iteration (global step)',fontdict=get_font())
+    plt.ylabel('Average Funds', fontdict=get_font())
+    plt.title('Funds gain due to Strategy/Mechanics', fontdict=get_font())
     plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=14)
     plt.subplots_adjust(right=0.75)
     plt.savefig("strategies.jpg")
 
     plt.show()
 
-colors = ["red","green","blue","purple", "orange", "magenta", "lime", "darkred", "darkblue", "yellow"]
 def plot_scatter():
     file_path = "agent.csv"
     df = pd.read_csv(file_path)
     col_names = list(df.columns)
     col_names = [x.split('_', 1) for x in col_names[1:]]
     # unique_strats = list(set(col_names))
-
-
 
     last_row = df.iloc[-1]
     funds = []
@@ -73,9 +73,9 @@ def proportional_line():
     for column in df.columns[2:]:
         plt.plot(df.index, df[column]/(df["avg_money"]*9)*100, label=column) #*100 percent
 
-    plt.xlabel('Iteration (global step)', fontdict=font)
-    plt.ylabel('% of total funds', fontdict=font)
-    plt.title('Funds percentage due to Strategy/Mechanics', fontdict=font)
+    plt.xlabel('Iteration (global step)', fontdict=get_font())
+    plt.ylabel('% of total funds', fontdict=get_font())
+    plt.title('Funds percentage due to Strategy/Mechanics', fontdict=get_font())
     plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=14)
     plt.subplots_adjust(right=0.75)
     plt.savefig("strategies_proportional.jpg")
