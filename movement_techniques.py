@@ -3,7 +3,7 @@ import math
 
 def movement_techniques(agent, model, radius, choice = None):
     if choice is None:
-        choice = random.choice(["random_spot", "random_walk", "move_within_radius"]) # More techniques to come, implementation as random choice should be adjusted
+        choice = random.choice(["random_spot", "random_walk", "move_within_radius"])
         
     if choice == "random_spot":
         move_to_random_spot(agent, model)

@@ -9,25 +9,18 @@ from trader import TraderAgent
 
 def agent_portrayal(agent: TraderAgent):
     portrayal = {"Filled": "true"}
-    # Can only do 2 shapes properly
-    # portrayal["Shape"] = agent.cs.mechanics["offer"].shapes[agent.custom_strategies["offer"]]
     portrayal["Shape"] = "circle"
-    # Can do infinetely many colors
     portrayal["Color"] = agent.cs.mechanics["witness"].colors[agent.custom_strategies["witness"]]
-    # Can do infinitely many texts, though it doesnt show properly (on the plotted shape)
     portrayal["Text"] = agent.cs.mechanics["trust_update"].text[agent.custom_strategies["trust_update"]]
-    # portrayal["Text"] = "x"
-    # portrayal["Text_color"] = "blue"
     portrayal["Layer"] = 0
 
-    # if portrayal["Shape"] == "arrowHead":
     for dimension in ["w", "h", "r"]:
         portrayal[dimension] = np.clip(agent.proportional_funds, 0.1, 0.99) * 0.3   #scale based on funds compared to others
 
     return portrayal
 
 def get_modelparams():
-    # Model visuals
+    # Interactivity
     return {
         "n_steps": mesa.visualization.Slider(
             "trading rounds per step:", 1, 1, 30, description="trading rounds per step"),
@@ -56,7 +49,7 @@ def setup_run_server():
     )
 
     server = ModularServer(AgentModel,
-                       [grid],  #TODO revist chart
+                       [grid],
                        "Traders Model",
                        get_modelparams())
 
