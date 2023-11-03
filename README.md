@@ -13,7 +13,7 @@ python server.py
 
 It contains a step button on the top right to iterate through the simulation.
 
-On the left some parameters can be changed. In the current version you are able to change the number of agents N, the trading rounds per step slider as well as whether agents will only trade with agents
+On the left some parameters can be changed. In the current version you are able to change the number of agents A, the trading rounds per step slider as well as whether agents will only trade with agents
 in their neighbourhood (you can also specify type if movement if neighbourhood is set to true).
 When changed the reset button on the top right should be used before the model is updated.
 
