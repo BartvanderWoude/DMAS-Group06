@@ -1,5 +1,5 @@
 # DMAS-Group06
-The effect of cronyism on a multi-agent reputation based trading game. Github: https://github.com/Altripayo/DMAS-Group06
+The effect of honesty on cronyism in a multi-agent reputation based trading game. Github: https://github.com/Altripayo/DMAS-Group06
 
 # Project structure
 There are a number of files. Giving a short explanation on what these files contain will make understanding the implementation easier.
