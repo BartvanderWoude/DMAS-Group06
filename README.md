@@ -27,9 +27,9 @@ Lastly, this file can be run independently after the simulation was run. This sc
 # Setup
 A file called requirements.txt is included that includes all the relevant python libraries for this implementation. 
 We use python 3.12. Earlier versions could not work. The required libraries can be installed using:
-...
+```
 pip install -r requirements.txt
-...
+```
 
 # How to use the model?
 
